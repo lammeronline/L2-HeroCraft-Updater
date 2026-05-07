@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Launcher/Launcher.csproj" />
+  <Project Path="PatchBuilder/PatchBuilder.csproj" />
+  <Project Path="Updater.Core/Updater.Core.csproj" />
+</Solution>

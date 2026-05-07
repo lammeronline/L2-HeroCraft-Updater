@@ -1,0 +1,9 @@
+bin/
+obj/
+build/
+.dotnet_home/
+.vs/
+*.user
+*.suo
+*.download
+*.log
