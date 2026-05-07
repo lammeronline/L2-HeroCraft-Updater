@@ -1,6 +1,8 @@
 bin/
 obj/
 build/
+SettingsSamples/
+SettingsSapmple/
 .dotnet_home/
 .vs/
 *.user
