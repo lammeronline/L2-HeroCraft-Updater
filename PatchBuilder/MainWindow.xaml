@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Patch Builder" Height="960" Width="980" MinHeight="900" MinWidth="900"
+        Title="Patch Builder" Height="1040" Width="980" MinHeight="940" MinWidth="900"
         Background="#111318" Foreground="#F4F6F8" FontFamily="Segoe UI">
     <Window.Resources>
         <SolidColorBrush x:Key="PanelBrush" Color="#1B2028" />
@@ -59,6 +59,10 @@
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button x:Name="LoadMetadataButton" Content="LOAD META" Width="124" Height="48"
+                        Margin="0,0,10,0" Click="LoadMetadataButton_Click" />
+                <Button x:Name="SaveMetadataButton" Content="SAVE META" Width="124" Height="48"
+                        Margin="0,0,10,0" Background="#6A4CC2" BorderBrush="#7B5ED2" Click="SaveMetadataButton_Click" />
                 <Button x:Name="ValidateButton" Content="VALIDATE" Width="132" Height="48"
                         Margin="0,0,10,0" Click="ValidateButton_Click" />
                 <Button x:Name="GenerateButton" Content="GENERATE" Width="180" Height="48"
@@ -70,6 +74,8 @@
         <Border Grid.Row="1" Background="{StaticResource PanelBrush}" BorderBrush="#2B333F" BorderThickness="1" Padding="18" CornerRadius="8" Margin="0,0,0,18">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -131,7 +137,14 @@
                 <Button Grid.Row="9" Grid.Column="2" Content="Browse" Width="96" Margin="0,0,0,10" Click="BrowseLauncherButton_Click" />
 
                 <TextBlock Grid.Row="10" Text="Launcher URL" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
-                <TextBox x:Name="LauncherUrlBox" Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="2" />
+                <TextBox x:Name="LauncherUrlBox" Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,10" />
+
+                <TextBlock Grid.Row="11" Text="News title" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                <TextBox x:Name="NewsTitleBox" Grid.Row="11" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,10" />
+
+                <TextBlock Grid.Row="12" Text="News body" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Top" Margin="0,6,0,0" />
+                <TextBox x:Name="NewsBodyBox" Grid.Row="12" Grid.Column="1" Grid.ColumnSpan="2" Height="58"
+                         AcceptsReturn="True" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" />
             </Grid>
         </Border>
 
