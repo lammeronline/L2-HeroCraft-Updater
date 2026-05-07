@@ -238,13 +238,14 @@ public partial class MainWindow : Window
             AppendLog("Loading manifest metadata: " + manifestPath);
 
             _loadedManifest = await ManifestStore.LoadAsync(manifestPath, _httpClient);
-            ChannelBox.Text = string.IsNullOrWhiteSpace(_loadedManifest.Channel)
+            var channel = string.IsNullOrWhiteSpace(_loadedManifest.Channel)
                 ? DefaultChannel
                 : _loadedManifest.Channel;
+            ChannelBox.Text = channel;
             VersionBox.Text = _loadedManifest.Version;
             ReportExtraFilesBox.IsChecked = string.Equals(_loadedManifest.ExtraFilePolicy, "report", StringComparison.OrdinalIgnoreCase);
             IgnoreRulesBox.Text = string.Join(Environment.NewLine, _loadedManifest.Ignore.Count == 0 ? DefaultIgnoreRules : _loadedManifest.Ignore);
-            LauncherUrlBox.Text = _loadedManifest.Launcher?.Url ?? string.Empty;
+            LauncherUrlBox.Text = NormalizeLauncherUrl(_loadedManifest.Launcher?.Url ?? string.Empty, channel);
 
             var firstNews = _loadedManifest.News.FirstOrDefault();
             NewsTitleBox.Text = firstNews?.Title ?? "Patch " + _loadedManifest.Version;
@@ -277,6 +278,7 @@ public partial class MainWindow : Window
                 ? _loadedManifest.Version
                 : VersionBox.Text.Trim();
             var channel = NormalizeChannel(ChannelBox.Text);
+            var baseUrl = BaseUrlBox.Text.Trim().TrimEnd('/');
             var ignoreRules = ParseIgnoreRules(IgnoreRulesBox.Text);
             var extraFilePolicy = ReportExtraFilesBox.IsChecked == true ? "report" : "ignore";
             var launcherInfo = await BuildMetadataLauncherInfoAsync(version, _loadedManifest.Launcher);
@@ -285,7 +287,7 @@ public partial class MainWindow : Window
             {
                 Version = version,
                 Channel = channel,
-                Files = _loadedManifest.Files,
+                Files = RebuildFileUrls(_loadedManifest.Files, baseUrl),
                 Ignore = ignoreRules,
                 ExtraFilePolicy = extraFilePolicy,
                 Launcher = launcherInfo,
@@ -298,6 +300,7 @@ public partial class MainWindow : Window
             SetStatus("Metadata saved", $"{updatedManifest.Files.Count} manifest file(s) preserved.", 100);
             FileCountText.Text = $"{updatedManifest.Files.Count} files";
             AppendLog("Metadata saved without rebuilding patch files: " + manifestPath);
+            AppendLog("File URLs updated from source URL: " + baseUrl);
             AppendLog("Upload manifest to: " + BuildManifestUrl(channel));
         }
         catch (Exception ex)
@@ -461,10 +464,23 @@ public partial class MainWindow : Window
         return UpdaterBaseUrl + NormalizeChannel(channel) + "/Launcher.exe";
     }
 
+    private static string NormalizeLauncherUrl(string value, string channel)
+    {
+        var launcherUrl = value.Trim();
+        var rootLauncherUrl = UpdaterBaseUrl + "Launcher.exe";
+
+        return string.IsNullOrWhiteSpace(launcherUrl)
+            || string.Equals(launcherUrl, rootLauncherUrl, StringComparison.OrdinalIgnoreCase)
+            ? BuildLauncherUrl(channel)
+            : launcherUrl;
+    }
+
     private async Task<LauncherUpdateInfo?> BuildLauncherInfoAsync(string version)
     {
         var launcherPath = LauncherFileBox.Text.Trim();
-        var launcherUrl = LauncherUrlBox.Text.Trim();
+        var channel = NormalizeChannel(ChannelBox.Text);
+        var launcherUrl = NormalizeLauncherUrl(LauncherUrlBox.Text, channel);
+        LauncherUrlBox.Text = launcherUrl;
 
         if (string.IsNullOrWhiteSpace(launcherPath) && string.IsNullOrWhiteSpace(launcherUrl))
         {
@@ -496,7 +512,9 @@ public partial class MainWindow : Window
     private async Task<LauncherUpdateInfo?> BuildMetadataLauncherInfoAsync(string version, LauncherUpdateInfo? existing)
     {
         var launcherPath = LauncherFileBox.Text.Trim();
-        var launcherUrl = LauncherUrlBox.Text.Trim();
+        var channel = NormalizeChannel(ChannelBox.Text);
+        var launcherUrl = NormalizeLauncherUrl(LauncherUrlBox.Text, channel);
+        LauncherUrlBox.Text = launcherUrl;
 
         if (string.IsNullOrWhiteSpace(launcherUrl))
         {
@@ -541,6 +559,32 @@ public partial class MainWindow : Window
                 PublishedAt = existing?.PublishedAt ?? DateTimeOffset.UtcNow
             }
         ];
+    }
+
+    private static List<ManifestFile> RebuildFileUrls(IEnumerable<ManifestFile> files, string baseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            return files.ToList();
+        }
+
+        var normalizedBaseUrl = baseUrl.TrimEnd('/');
+        return files
+            .Select(file =>
+            {
+                var urlPath = file.Compressed ? file.Path + ".gz" : file.Path;
+                return new ManifestFile
+                {
+                    Path = file.Path,
+                    Sha256 = file.Sha256,
+                    Size = file.Size,
+                    Url = normalizedBaseUrl + "/" + EscapeUrlPath(urlPath),
+                    Compressed = file.Compressed,
+                    CompressedSize = file.CompressedSize,
+                    CompressedSha256 = file.CompressedSha256
+                };
+            })
+            .ToList();
     }
 
     private static bool PathsEqual(string left, string right)

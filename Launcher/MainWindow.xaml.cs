@@ -457,7 +457,9 @@ public partial class MainWindow : Window
         var downloadedHash = await FileHasher.ComputeSha256Async(downloadedLauncher);
         if (!string.Equals(downloadedHash, launcher.Sha256, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Downloaded launcher failed SHA256 verification.");
+            throw new InvalidOperationException(
+                "Downloaded launcher failed SHA256 verification. "
+                + $"Expected {launcher.Sha256}, actual {downloadedHash}.");
         }
 
         var downloadedSize = new FileInfo(downloadedLauncher).Length;
