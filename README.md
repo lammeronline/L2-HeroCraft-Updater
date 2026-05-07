@@ -7,6 +7,7 @@ MVP implementation based on `l2_modern_updater_tz.md`.
 - `Launcher` - WPF launcher UI with manifest loading, file verification, update download, and game launch.
 - `Updater.Core` - shared manifest, SHA256 verification, safe path handling, and download services.
 - `PatchBuilder` - WPF utility that scans a client directory and generates `manifest.json`.
+- `ConfigBuilder` - WPF utility that generates launcher `config.json`.
 
 `Updater.Core` also includes a managed `Lineage2Ver413` codec for `l2.ini` style files.
 It can decode legacy/modern 413 files and encode modern 413 files without shipping `l2encdec.exe`.
@@ -17,7 +18,7 @@ It can decode legacy/modern 413 files and encode modern 413 files without shippi
 .\Tools\build_all.bat
 ```
 
-Build artifacts are published to `build\Launcher` and `build\PatchBuilder`.
+Build artifacts are published to `build\Launcher`, `build\PatchBuilder`, and `build\ConfigBuilder`.
 Projects target `.NET 8`.
 
 Single-file client build:
@@ -38,13 +39,13 @@ The launcher can load either a local manifest path or an HTTPS manifest URL.
 For local tests, use the `Local` button in PatchBuilder so manifest file URLs point to the selected source folder.
 PatchBuilder also writes manifest `ignore` rules; Launcher uses them when reporting extra files.
 
-## Live Layout
+## Server Layout
 
-- Live manifest URL: `https://l2.lammeronline.com/updater/live/manifest.json`
-- Live patch files base URL: `https://l2.lammeronline.com/updater/live/patch/`
-- Live launcher URL: `https://l2.lammeronline.com/updater/live/Launcher.exe`
+- Manifest URL: `https://l2.lammeronline.com/updater/manifest.json`
+- Config URL: `https://l2.lammeronline.com/updater/config.json`
+- Patch files base URL: `https://l2.lammeronline.com/updater/patch/`
+- Launcher URL: `https://l2.lammeronline.com/updater/Launcher.exe`
 
-Test channel uses the same layout under `/updater/test/`.
-
-Upload generated `manifest.json` to `/updater/<channel>/`.
-Upload patch files preserving folders to `/updater/<channel>/patch/`.
+Upload generated `manifest.json` to `/updater/`.
+Upload generated `config.json` to `/updater/`.
+Upload patch files preserving folders to `/updater/patch/`.

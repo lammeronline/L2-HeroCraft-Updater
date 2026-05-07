@@ -11,18 +11,24 @@ namespace Launcher;
 
 public partial class MainWindow : Window
 {
-    private const string DefaultManifestUrl = "https://l2.lammeronline.com/updater/live/manifest.json";
+    private const string DefaultManifestUrl = "https://l2.lammeronline.com/updater/manifest.json";
+    private const string DefaultConfigUrl = "https://l2.lammeronline.com/updater/config.json";
     private readonly string _appDirectory = AppContext.BaseDirectory;
     private readonly string _settingsPath;
     private readonly FileLog _launcherLog;
     private readonly FileLog _updaterLog;
     private readonly HttpClient _httpClient = new();
+    private readonly HttpClient _configHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(15)
+    };
     private readonly FileVerificationService _verificationService = new();
     private readonly ExtraFileScanService _extraFileScanService = new();
     private readonly FileDownloadService _downloadService;
     private IReadOnlyList<FileVerificationResult> _pendingUpdates = [];
     private IReadOnlyList<ExtraFileResult> _extraFiles = [];
     private UpdateManifest? _manifest;
+    private LauncherConfig _config = LauncherConfig.CreateDefault();
     private bool _suppressSettingsSave = true;
 
     public MainWindow()
@@ -37,7 +43,7 @@ public partial class MainWindow : Window
         GameDirectoryBox.Text = Environment.CurrentDirectory;
         ManifestSourceBox.Text = DefaultManifestUrl;
         AppendLog("Launcher started.");
-        _ = LoadSettingsAsync();
+        _ = LoadStartupAsync();
     }
 
     private async void CheckButton_Click(object sender, RoutedEventArgs e)
@@ -96,19 +102,28 @@ public partial class MainWindow : Window
         try
         {
             var clientDirectory = GameDirectoryBox.Text;
+            if (_config.RequireUpdateBeforePlay)
+            {
+                await CheckFilesAsync(VerificationMode.Fast);
+                if (_pendingUpdates.Count > 0)
+                {
+                    SetStatus("Update required", "Update files before launch.", MainProgressBar.Value);
+                    return;
+                }
+            }
+
             await ApplyClientSettingsAsync(clientDirectory);
 
-            var candidates = new[]
-            {
-                Path.Combine(clientDirectory, "system", "l2.exe"),
-                Path.Combine(clientDirectory, "l2.exe")
-            };
+            var candidates = _config.GameExecutables
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => Path.Combine(clientDirectory, path.Replace('/', Path.DirectorySeparatorChar)))
+                .ToArray();
 
             var executable = candidates.FirstOrDefault(File.Exists);
             if (executable is null)
             {
                 AppendLog("Game executable was not found.");
-                SetStatus("Cannot launch", "system/l2.exe was not found.", MainProgressBar.Value);
+                SetStatus("Cannot launch", "Game executable was not found.", MainProgressBar.Value);
                 return;
             }
 
@@ -341,6 +356,43 @@ public partial class MainWindow : Window
         _updaterLog.Write(message);
     }
 
+    private async Task LoadStartupAsync()
+    {
+        await LoadConfigAsync();
+        await LoadSettingsAsync();
+    }
+
+    private async Task LoadConfigAsync()
+    {
+        try
+        {
+            _config = await LauncherConfigStore.LoadAsync(DefaultConfigUrl, _configHttpClient);
+            ApplyConfig(_config);
+            AppendLog("Remote config loaded.");
+        }
+        catch (Exception ex)
+        {
+            _config = LauncherConfig.CreateDefault();
+            ApplyConfig(_config);
+            AppendLog("Remote config skipped: " + ex.Message);
+        }
+    }
+
+    private void ApplyConfig(LauncherConfig config)
+    {
+        if (!string.IsNullOrWhiteSpace(config.ManifestUrl))
+        {
+            ManifestSourceBox.Text = config.ManifestUrl;
+        }
+
+        PlayButton.Content = string.IsNullOrWhiteSpace(config.PlayButtonText) ? "PLAY" : config.PlayButtonText;
+        ClientSettingsPanel.Visibility = config.ShowClientSettings ? Visibility.Visible : Visibility.Collapsed;
+        FillResolutionBox(config.Resolutions, config.DefaultResolution);
+        SelectComboBoxItem(DisplayModeBox, string.IsNullOrWhiteSpace(config.DefaultDisplayMode) ? "Windowed" : config.DefaultDisplayMode);
+        SelectComboBoxItem(ResolutionBox, string.IsNullOrWhiteSpace(config.DefaultResolution) ? "1920x1080" : config.DefaultResolution);
+        AudioMuteBox.IsChecked = config.DefaultAudioMuteOn;
+    }
+
     private async Task LoadSettingsAsync()
     {
         var settings = await LauncherSettings.LoadAsync(_settingsPath);
@@ -350,13 +402,13 @@ public partial class MainWindow : Window
             GameDirectoryBox.Text = settings.ClientDirectory;
         }
 
-        if (!string.IsNullOrWhiteSpace(settings.ManifestSource))
+        if (IsUserManifestOverride(settings.ManifestSource))
         {
             ManifestSourceBox.Text = settings.ManifestSource;
         }
 
-        SelectComboBoxItem(DisplayModeBox, string.IsNullOrWhiteSpace(settings.DisplayMode) ? "Windowed" : settings.DisplayMode);
-        SelectComboBoxItem(ResolutionBox, string.IsNullOrWhiteSpace(settings.Resolution) ? "1920x1080" : settings.Resolution);
+        SelectComboBoxItem(DisplayModeBox, string.IsNullOrWhiteSpace(settings.DisplayMode) ? _config.DefaultDisplayMode : settings.DisplayMode);
+        SelectComboBoxItem(ResolutionBox, string.IsNullOrWhiteSpace(settings.Resolution) ? _config.DefaultResolution : settings.Resolution);
         AudioMuteBox.IsChecked = settings.AudioMuteOn;
 
         _suppressSettingsSave = false;
@@ -586,6 +638,43 @@ public partial class MainWindow : Window
                 return;
             }
         }
+    }
+
+    private void FillResolutionBox(IEnumerable<string> resolutions, string defaultResolution)
+    {
+        var values = resolutions
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (values.Count == 0)
+        {
+            values = LauncherConfig.CreateDefault().Resolutions;
+        }
+
+        ResolutionBox.Items.Clear();
+        foreach (var value in values)
+        {
+            ResolutionBox.Items.Add(new ComboBoxItem { Content = value });
+        }
+
+        SelectComboBoxItem(ResolutionBox, string.IsNullOrWhiteSpace(defaultResolution) ? values[0] : defaultResolution);
+    }
+
+    private static bool IsUserManifestOverride(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return true;
+        }
+
+        return !value.StartsWith("https://l2.lammeronline.com/updater/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetComboBoxText(ComboBox comboBox, string fallback)

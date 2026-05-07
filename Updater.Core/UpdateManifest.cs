@@ -7,9 +7,6 @@ public sealed class UpdateManifest
     [JsonPropertyName("version")]
     public string Version { get; init; } = "1.0.0";
 
-    [JsonPropertyName("channel")]
-    public string Channel { get; init; } = "live";
-
     [JsonPropertyName("files")]
     public List<ManifestFile> Files { get; init; } = [];
 

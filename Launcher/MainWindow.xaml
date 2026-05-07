@@ -128,7 +128,7 @@
                     </Grid>
                 </Border>
 
-                <Border Grid.Row="1" Background="{StaticResource PanelBrush}" BorderBrush="#2B333F" BorderThickness="1" Padding="18" CornerRadius="8" Margin="0,18,0,0">
+                <Border x:Name="ClientSettingsPanel" Grid.Row="1" Background="{StaticResource PanelBrush}" BorderBrush="#2B333F" BorderThickness="1" Padding="18" CornerRadius="8" Margin="0,18,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
