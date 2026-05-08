@@ -509,13 +509,12 @@ public partial class MainWindow : Window
         {
             FileName = executable,
             WorkingDirectory = Path.GetDirectoryName(executable)!,
-            UseShellExecute = autoLoginAccount is null
+            UseShellExecute = true
         };
 
         if (autoLoginAccount is not null)
         {
-            startInfo.ArgumentList.Add("account=" + autoLoginAccount.Login);
-            startInfo.ArgumentList.Add("password=" + autoLoginAccount.Password);
+            startInfo.Arguments = BuildAutoLoginArguments(autoLoginAccount);
         }
 
         Process.Start(startInfo);
@@ -531,6 +530,27 @@ public partial class MainWindow : Window
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Select(path => Path.Combine(clientDirectory, path.Replace('/', Path.DirectorySeparatorChar)))
             .FirstOrDefault(File.Exists);
+    }
+
+    private static string BuildAutoLoginArguments(AutoLoginAccount account)
+    {
+        return "account=" + QuoteProcessArgument(account.Login)
+            + " password=" + QuoteProcessArgument(account.Password);
+    }
+
+    private static string QuoteProcessArgument(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "\"\"";
+        }
+
+        if (!value.Any(char.IsWhiteSpace) && !value.Contains('"'))
+        {
+            return value;
+        }
+
+        return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
     }
 
     // Local launcher settings
