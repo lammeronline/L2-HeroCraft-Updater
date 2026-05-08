@@ -1,0 +1,23 @@
+{
+  "manifestUrl": "https://yoursite.com/updater/manifest.json",
+  "newsUrl": "https://yoursite.com/updater/news.html",
+  "playButtonText": "PLAY",
+  "showClientSettings": true,
+  "requireUpdateBeforePlay": true,
+  "autoLoginEnabled": false,
+  "gameExecutables": [
+    "system/l2.exe",
+    "l2.exe"
+  ],
+  "resolutions": [
+    "1024x768",
+    "1280x720",
+    "1366x768",
+    "1600x900",
+    "1920x1080",
+    "2560x1440"
+  ],
+  "defaultDisplayMode": "Windowed",
+  "defaultResolution": "1920x1080",
+  "defaultAudioMuteOn": false
+}

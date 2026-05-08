@@ -2,6 +2,7 @@ using System.Text.Json;
 
 namespace L2ModernUpdater.Core;
 
+/// <summary>Loads and saves launcher config JSON from either local disk or HTTP(S).</summary>
 public static class LauncherConfigStore
 {
     public static async Task<LauncherConfig> LoadAsync(

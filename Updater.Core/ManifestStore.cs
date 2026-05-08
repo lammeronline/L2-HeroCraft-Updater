@@ -2,6 +2,7 @@ using System.Text.Json;
 
 namespace L2ModernUpdater.Core;
 
+/// <summary>Loads and saves manifest JSON from either local disk or HTTP(S).</summary>
 public static class ManifestStore
 {
     public static readonly JsonSerializerOptions JsonOptions = new()

@@ -4,6 +4,10 @@ using System.IO.Compression;
 
 namespace L2ModernUpdater.Core;
 
+/// <summary>
+/// Downloads or copies missing/outdated manifest files, verifies hashes and reports both
+/// current-file and total progress. Temporary files are moved into place only after validation.
+/// </summary>
 public sealed class FileDownloadService
 {
     private readonly HttpClient _httpClient;

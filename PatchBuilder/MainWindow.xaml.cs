@@ -10,9 +10,11 @@ using System.Windows;
 
 namespace PatchBuilder;
 
+// Manifest authoring tool. The top half of the class contains UI commands;
+// helper sections below keep URL, metadata, file filtering and persistence logic separated.
 public partial class MainWindow : Window
 {
-    private const string UpdaterBaseUrl = "https://l2.lammeronline.com/updater/";
+    private const string UpdaterBaseUrl = "https://yoursite.com/updater/";
     private const string LiveManifestFileName = "manifest.json";
     private readonly string _settingsPath = Path.Combine(AppContext.BaseDirectory, "patchbuilder.settings.json");
     private UpdateManifest? _loadedManifest;
@@ -21,6 +23,7 @@ public partial class MainWindow : Window
         Timeout = TimeSpan.FromSeconds(15)
     };
 
+    // Startup
     public MainWindow()
     {
         InitializeComponent();
@@ -39,6 +42,7 @@ public partial class MainWindow : Window
         AppendLog("Patch Builder started.");
     }
 
+    // Primary commands
     private async void GenerateButton_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -195,7 +199,6 @@ public partial class MainWindow : Window
             var filePaths = Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories)
                 .Where(path => IsPatchFile(path, outputManifest))
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-                .Take(20)
                 .ToList();
 
             if (filePaths.Count == 0)
@@ -216,7 +219,7 @@ public partial class MainWindow : Window
                 AppendLog($"{status} {relativePath}");
             }
 
-            SetStatus("Validation complete", "Checked first " + filePaths.Count + " file URL(s).", 100);
+            SetStatus("Validation complete", "Checked " + filePaths.Count + " file URL(s).", 100);
         }
         catch (Exception ex)
         {
@@ -310,6 +313,7 @@ public partial class MainWindow : Window
         }
     }
 
+    // File and folder pickers
     private void BrowseSourceButton_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog
@@ -399,6 +403,7 @@ public partial class MainWindow : Window
         base.OnClosing(e);
     }
 
+    // URL helpers
     private static string EscapeUrlPath(string relativePath)
     {
         return string.Join(
@@ -467,6 +472,7 @@ public partial class MainWindow : Window
         return launcherUrl;
     }
 
+    // Manifest metadata helpers
     private async Task<LauncherUpdateInfo?> BuildLauncherInfoAsync(string version)
     {
         var launcherPath = LauncherFileBox.Text.Trim();
@@ -577,6 +583,7 @@ public partial class MainWindow : Window
             .ToList();
     }
 
+    // File filtering and compression
     private static bool PathsEqual(string left, string right)
     {
         return string.Equals(
@@ -650,6 +657,7 @@ public partial class MainWindow : Window
         "Updater.Core.pdb"
     };
 
+    // Validation and defaults
     private async Task<string> ValidateUrlAsync(string url)
     {
         using var headRequest = new HttpRequestMessage(HttpMethod.Head, url);
@@ -709,6 +717,7 @@ public partial class MainWindow : Window
         "system/s_info.ini"
     ];
 
+    // UI state and settings persistence
     private void SetStatus(string status, string currentFile, double progress)
     {
         StatusText.Text = status;

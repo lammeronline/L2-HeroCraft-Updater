@@ -8,9 +8,11 @@ using System.Windows.Controls;
 
 namespace Launcher;
 
+// Main launcher shell. UI event handlers stay thin and delegate to the sections below:
+// config/bootstrap, verification/update, launch, self-update, client settings and UI helpers.
 public partial class MainWindow : Window
 {
-    private const string DefaultConfigUrl = "https://l2.lammeronline.com/updater/config.json";
+    private const string DefaultConfigUrl = "https://yoursite.com/updater/config.json";
     private const string LocalConfigFileName = "config.json";
     private readonly string _appDirectory = AppContext.BaseDirectory;
     private readonly string _settingsPath;
@@ -40,6 +42,7 @@ public partial class MainWindow : Window
     private bool _hasSavedSettings;
     private bool _isBusy;
 
+    // Startup
     public MainWindow()
     {
         _settingsPath = Path.Combine(_appDirectory, "launcher.settings.json");
@@ -55,6 +58,7 @@ public partial class MainWindow : Window
         _ = LoadStartupAsync();
     }
 
+    // Toolbar commands
     private async void CheckButton_Click(object sender, RoutedEventArgs e)
     {
         await CheckFilesAsync(VerificationMode.Fast);
@@ -193,6 +197,7 @@ public partial class MainWindow : Window
         }
     }
 
+    // Verification and patching
     private async Task RepairAsync()
     {
         try
@@ -321,6 +326,7 @@ public partial class MainWindow : Window
         return Path.GetFullPath(source);
     }
 
+    // UI state and logging
     private void SetStatus(
         string status,
         string currentFile,
@@ -397,6 +403,7 @@ public partial class MainWindow : Window
         _updaterLog.Write(message);
     }
 
+    // Config bootstrap
     private async Task LoadStartupAsync()
     {
         await LoadSettingsAsync();
@@ -476,6 +483,7 @@ public partial class MainWindow : Window
         return false;
     }
 
+    // Game launch
     private async Task LaunchGameAsync(AutoLoginAccount? autoLoginAccount = null)
     {
         var clientDirectory = _settings.ClientDirectory;
@@ -490,6 +498,11 @@ public partial class MainWindow : Window
             AppendLog("Game executable was not found.");
             SetStatus("Cannot launch", "Game executable was not found.", MainProgressBar.Value, CurrentFileProgressBar.Value);
             return;
+        }
+
+        if (autoLoginAccount is not null)
+        {
+            await EnableCommandLineLoginAsync(clientDirectory);
         }
 
         var startInfo = new ProcessStartInfo
@@ -520,6 +533,7 @@ public partial class MainWindow : Window
             .FirstOrDefault(File.Exists);
     }
 
+    // Local launcher settings
     private async Task LoadSettingsAsync()
     {
         _hasSavedSettings = File.Exists(_settingsPath);
@@ -562,6 +576,7 @@ public partial class MainWindow : Window
         }
     }
 
+    // Extra-file reporting
     private void LogExtraFilePreview()
     {
         if (_extraFiles.Count == 0)
@@ -596,6 +611,7 @@ public partial class MainWindow : Window
         return $"{prefix}. Extra files: {_extraFiles.Count}";
     }
 
+    // Launcher self-update
     private async Task<bool> TrySelfUpdateAsync(UpdateManifest manifest)
     {
         var launcher = manifest.Launcher;
@@ -703,6 +719,7 @@ public partial class MainWindow : Window
         return scriptPath;
     }
 
+    // Client INI settings
     private async Task ApplyClientSettingsAsync(string clientDirectory)
     {
         var systemDirectory = Path.Combine(clientDirectory, "system");
@@ -726,6 +743,19 @@ public partial class MainWindow : Window
         }
 
         AppendLog($"Client settings applied: {mode}, {width}x{height}, mute={_settings.AudioMuteOn}.");
+    }
+
+    private async Task EnableCommandLineLoginAsync(string clientDirectory)
+    {
+        var l2IniPath = Path.Combine(clientDirectory, "system", "l2.ini");
+        if (!File.Exists(l2IniPath))
+        {
+            AppendLog("l2.ini was not found. CmdLineLogin setting skipped.");
+            return;
+        }
+
+        await UpdateL2IniValueAsync(l2IniPath, "CmdLineLogin", "true");
+        AppendLog("AutoLogin client setting applied: CmdLineLogin=true.");
     }
 
     private static async Task UpdateOptionIniAsync(
@@ -783,6 +813,7 @@ public partial class MainWindow : Window
         return Path.GetFullPath(Path.Combine(configDirectory ?? AppContext.BaseDirectory, manifestSource));
     }
 
+    // Header summary and news panel
     private void RefreshSettingsSummary()
     {
         ClientDirectoryText.Text = string.IsNullOrWhiteSpace(_settings.ClientDirectory)
@@ -865,13 +896,18 @@ public partial class MainWindow : Window
 
     private async Task UpdateL2IniWindowFrameAsync(string path, bool useWindowFrame)
     {
+        await UpdateL2IniValueAsync(path, "UseWindowFrame", useWindowFrame ? "true" : "false");
+    }
+
+    private async Task UpdateL2IniValueAsync(string path, string key, string value)
+    {
         try
         {
             var encrypted = await File.ReadAllBytesAsync(path);
             var plain = L2IniCodec.Decode413(encrypted);
             var encoding = DetectTextEncoding(plain);
             var text = encoding.GetString(plain);
-            text = SetIniTextValue(text, "UseWindowFrame", useWindowFrame ? "true" : "false");
+            text = SetIniTextValue(text, key, value);
             var updatedPlain = encoding.GetBytes(text);
             var updatedEncrypted = L2IniCodec.Encode413(updatedPlain);
             await File.WriteAllBytesAsync(path, updatedEncrypted);

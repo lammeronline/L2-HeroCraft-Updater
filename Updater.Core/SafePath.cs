@@ -1,5 +1,6 @@
 namespace L2ModernUpdater.Core;
 
+/// <summary>Guards all manifest-driven file access against absolute paths and directory traversal.</summary>
 public static class SafePath
 {
     public static string CombineUnderRoot(string rootDirectory, string manifestPath)

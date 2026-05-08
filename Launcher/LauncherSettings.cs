@@ -3,6 +3,7 @@ using System.Text.Json;
 
 namespace Launcher;
 
+/// <summary>Local player preferences stored beside Launcher.exe.</summary>
 public sealed class LauncherSettings
 {
     public string ClientDirectory { get; set; } = string.Empty;
@@ -31,6 +32,7 @@ public sealed class LauncherSettings
         }
         catch
         {
+            // Corrupt local settings should not prevent the launcher from opening.
             return new LauncherSettings();
         }
     }

@@ -1,5 +1,9 @@
 namespace L2ModernUpdater.Core;
 
+/// <summary>
+/// Compares the local client folder with a manifest. Fast mode trusts size only;
+/// full mode also verifies SHA256 for every existing file.
+/// </summary>
 public sealed class FileVerificationService
 {
     public async Task<IReadOnlyList<FileVerificationResult>> VerifyAsync(

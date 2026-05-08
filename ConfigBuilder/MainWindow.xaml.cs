@@ -5,6 +5,8 @@ using System.Windows;
 
 namespace ConfigBuilder;
 
+// Small authoring tool for server-side config.json. Keep it deliberately thin:
+// the UI maps one-to-one to LauncherConfig so release operators can verify output easily.
 public partial class MainWindow : Window
 {
     public MainWindow()
@@ -38,7 +40,7 @@ public partial class MainWindow : Window
             var config = BuildConfig();
             await LauncherConfigStore.SaveAsync(config, path);
             AppendLog("Config saved: " + path);
-            AppendLog("Upload to: https://l2.lammeronline.com/updater/config.json");
+            AppendLog("Upload to: https://yoursite.com/updater/config.json");
         }
         catch (Exception ex)
         {

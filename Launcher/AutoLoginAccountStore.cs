@@ -3,6 +3,10 @@ using System.Text.Json;
 
 namespace Launcher;
 
+/// <summary>
+/// Local AutoLogin account persistence. Server config only controls feature visibility;
+/// real permission checks still belong on the game/auth server.
+/// </summary>
 public static class AutoLoginAccountStore
 {
     public static async Task<List<AutoLoginAccount>> LoadAsync(string path)
