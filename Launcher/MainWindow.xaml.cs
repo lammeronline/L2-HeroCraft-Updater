@@ -10,10 +10,11 @@ namespace Launcher;
 
 public partial class MainWindow : Window
 {
-    private const string DefaultManifestUrl = "https://l2.lammeronline.com/updater/manifest.json";
     private const string DefaultConfigUrl = "https://l2.lammeronline.com/updater/config.json";
+    private const string LocalConfigFileName = "config.json";
     private readonly string _appDirectory = AppContext.BaseDirectory;
     private readonly string _settingsPath;
+    private readonly string _autoLoginAccountsPath;
     private readonly FileLog _launcherLog;
     private readonly FileLog _updaterLog;
     private readonly HttpClient _httpClient = new();
@@ -30,15 +31,18 @@ public partial class MainWindow : Window
     private LauncherConfig _config = LauncherConfig.CreateDefault();
     private LauncherSettings _settings = new()
     {
-        ClientDirectory = Environment.CurrentDirectory,
-        ManifestSource = DefaultManifestUrl
+        ClientDirectory = Environment.CurrentDirectory
     };
     private IReadOnlyList<string> _resolutions = LauncherConfig.CreateDefault().Resolutions;
+    private string _configSource = DefaultConfigUrl;
+    private string _manifestSource = LauncherConfig.CreateDefault().ManifestUrl;
+    private bool _hasSavedSettings;
     private bool _isBusy;
 
     public MainWindow()
     {
         _settingsPath = Path.Combine(_appDirectory, "launcher.settings.json");
+        _autoLoginAccountsPath = Path.Combine(_appDirectory, "autologin.accounts.json");
         _launcherLog = new FileLog(Path.Combine(_appDirectory, "launcher.log"));
         _updaterLog = new FileLog(Path.Combine(_appDirectory, "updater.log"));
 
@@ -104,49 +108,50 @@ public partial class MainWindow : Window
     {
         try
         {
-            var clientDirectory = _settings.ClientDirectory;
-            if (_config.RequireUpdateBeforePlay)
+            if (!await EnsureReadyToLaunchAsync())
             {
-                await CheckFilesAsync(VerificationMode.Fast);
-                if (_pendingUpdates.Count > 0)
-                {
-                    SetStatus("Update required", "Update files before launch.", MainProgressBar.Value, CurrentFileProgressBar.Value);
-                    UpdatePlayButtonState();
-                    return;
-                }
-            }
-
-            if (_config.ShowClientSettings)
-            {
-                await ApplyClientSettingsAsync(clientDirectory);
-            }
-
-            var candidates = _config.GameExecutables
-                .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Select(path => Path.Combine(clientDirectory, path.Replace('/', Path.DirectorySeparatorChar)))
-                .ToArray();
-
-            var executable = candidates.FirstOrDefault(File.Exists);
-            if (executable is null)
-            {
-                AppendLog("Game executable was not found.");
-                SetStatus("Cannot launch", "Game executable was not found.", MainProgressBar.Value, CurrentFileProgressBar.Value);
                 return;
             }
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = executable,
-                WorkingDirectory = Path.GetDirectoryName(executable)!,
-                UseShellExecute = true
-            });
-
-            AppendLog("Game launched: " + executable);
+            await LaunchGameAsync();
         }
         catch (Exception ex)
         {
             AppendLog("Launch failed: " + ex.Message);
             SetStatus("Launch failed", ex.Message, MainProgressBar.Value, CurrentFileProgressBar.Value);
+        }
+    }
+
+    private async void AutoLoginButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_config.AutoLoginEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!await EnsureReadyToLaunchAsync())
+            {
+                return;
+            }
+
+            var window = new AutoLoginWindow(_autoLoginAccountsPath)
+            {
+                Owner = this
+            };
+
+            if (window.ShowDialog() != true || window.SelectedAccount is null)
+            {
+                return;
+            }
+
+            await LaunchGameAsync(window.SelectedAccount);
+        }
+        catch (Exception ex)
+        {
+            AppendLog("AutoLogin launch failed: " + ex.Message);
+            SetStatus("AutoLogin failed", ex.Message, MainProgressBar.Value, CurrentFileProgressBar.Value);
         }
     }
 
@@ -167,6 +172,8 @@ public partial class MainWindow : Window
             _settings = window.CreateSettings();
             RefreshSettingsSummary();
             await SaveSettingsAsync();
+            _hasSavedSettings = true;
+            await LoadConfigAsync();
 
             if (window.ShouldApplySettings)
             {
@@ -239,7 +246,7 @@ public partial class MainWindow : Window
                 SetBusy(true);
             }
 
-            var manifestSource = ResolveManifestSource(_settings.ManifestSource);
+            var manifestSource = ResolveManifestSource(_manifestSource);
             await SaveSettingsAsync();
             AppendUpdaterLog("Loading manifest: " + manifestSource);
 
@@ -368,8 +375,12 @@ public partial class MainWindow : Window
     {
         var updateRequired = _config.RequireUpdateBeforePlay && _pendingUpdates.Count > 0;
         PlayButton.IsEnabled = !_isBusy && !updateRequired;
+        AutoLoginButton.IsEnabled = !_isBusy && !updateRequired && _config.AutoLoginEnabled;
         PlayButton.ToolTip = updateRequired
             ? "Update files before launch."
+            : null;
+        AutoLoginButton.ToolTip = updateRequired
+            ? "Update files before AutoLogin launch."
             : null;
     }
 
@@ -388,44 +399,125 @@ public partial class MainWindow : Window
 
     private async Task LoadStartupAsync()
     {
-        await LoadConfigAsync();
         await LoadSettingsAsync();
+        await LoadConfigAsync();
     }
 
     private async Task LoadConfigAsync()
     {
         try
         {
-            _config = await LauncherConfigStore.LoadAsync(DefaultConfigUrl, _configHttpClient);
-            ApplyConfig(_config);
-            AppendLog("Remote config loaded.");
+            _configSource = ResolveConfigSource();
+            _config = await LauncherConfigStore.LoadAsync(_configSource, _configHttpClient);
+            ApplyConfig(_config, _configSource);
+            AppendLog("Config loaded: " + _configSource);
         }
         catch (Exception ex)
         {
             _config = LauncherConfig.CreateDefault();
-            ApplyConfig(_config);
-            AppendLog("Remote config skipped: " + ex.Message);
+            _configSource = DefaultConfigUrl;
+            ApplyConfig(_config, _configSource);
+            AppendLog("Config skipped: " + ex.Message);
         }
     }
 
-    private void ApplyConfig(LauncherConfig config)
+    private string ResolveConfigSource()
+    {
+        if (!string.IsNullOrWhiteSpace(_settings.ConfigSource))
+        {
+            return _settings.ConfigSource;
+        }
+
+        var localConfig = Path.Combine(_appDirectory, LocalConfigFileName);
+        return File.Exists(localConfig) ? localConfig : DefaultConfigUrl;
+    }
+
+    private void ApplyConfig(LauncherConfig config, string configSource)
     {
         if (!string.IsNullOrWhiteSpace(config.ManifestUrl))
         {
-            _settings.ManifestSource = config.ManifestUrl;
+            _manifestSource = ResolveManifestFromConfig(config.ManifestUrl, configSource);
         }
 
         PlayButton.Content = string.IsNullOrWhiteSpace(config.PlayButtonText) ? "PLAY" : config.PlayButtonText;
+        AutoLoginButton.Visibility = config.AutoLoginEnabled ? Visibility.Visible : Visibility.Collapsed;
         _resolutions = BuildResolutionList(config.Resolutions);
-        _settings.DisplayMode = string.IsNullOrWhiteSpace(config.DefaultDisplayMode) ? "Windowed" : config.DefaultDisplayMode;
-        _settings.Resolution = string.IsNullOrWhiteSpace(config.DefaultResolution) ? "1920x1080" : config.DefaultResolution;
-        _settings.AudioMuteOn = config.DefaultAudioMuteOn;
+        if (!_hasSavedSettings)
+        {
+            _settings.DisplayMode = string.IsNullOrWhiteSpace(config.DefaultDisplayMode) ? "Windowed" : config.DefaultDisplayMode;
+            _settings.Resolution = string.IsNullOrWhiteSpace(config.DefaultResolution) ? "1920x1080" : config.DefaultResolution;
+            _settings.AudioMuteOn = config.DefaultAudioMuteOn;
+        }
+
         RefreshSettingsSummary();
         UpdatePlayButtonState();
     }
 
+    private async Task<bool> EnsureReadyToLaunchAsync()
+    {
+        if (!_config.RequireUpdateBeforePlay)
+        {
+            return true;
+        }
+
+        await CheckFilesAsync(VerificationMode.Fast);
+        if (_pendingUpdates.Count == 0)
+        {
+            return true;
+        }
+
+        SetStatus("Update required", "Update files before launch.", MainProgressBar.Value, CurrentFileProgressBar.Value);
+        UpdatePlayButtonState();
+        return false;
+    }
+
+    private async Task LaunchGameAsync(AutoLoginAccount? autoLoginAccount = null)
+    {
+        var clientDirectory = _settings.ClientDirectory;
+        if (_config.ShowClientSettings)
+        {
+            await ApplyClientSettingsAsync(clientDirectory);
+        }
+
+        var executable = FindGameExecutable(clientDirectory);
+        if (executable is null)
+        {
+            AppendLog("Game executable was not found.");
+            SetStatus("Cannot launch", "Game executable was not found.", MainProgressBar.Value, CurrentFileProgressBar.Value);
+            return;
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = executable,
+            WorkingDirectory = Path.GetDirectoryName(executable)!,
+            UseShellExecute = autoLoginAccount is null
+        };
+
+        if (autoLoginAccount is not null)
+        {
+            startInfo.ArgumentList.Add("account=" + autoLoginAccount.Login);
+            startInfo.ArgumentList.Add("password=" + autoLoginAccount.Password);
+        }
+
+        Process.Start(startInfo);
+
+        AppendLog(autoLoginAccount is null
+            ? "Game launched: " + executable
+            : "Game launched with AutoLogin: " + autoLoginAccount.Login);
+    }
+
+    private string? FindGameExecutable(string clientDirectory)
+    {
+        return _config.GameExecutables
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => Path.Combine(clientDirectory, path.Replace('/', Path.DirectorySeparatorChar)))
+            .FirstOrDefault(File.Exists);
+    }
+
     private async Task LoadSettingsAsync()
     {
+        _hasSavedSettings = File.Exists(_settingsPath);
         var settings = await LauncherSettings.LoadAsync(_settingsPath);
 
         if (!string.IsNullOrWhiteSpace(settings.ClientDirectory))
@@ -433,9 +525,9 @@ public partial class MainWindow : Window
             _settings.ClientDirectory = settings.ClientDirectory;
         }
 
-        if (IsUserManifestOverride(settings.ManifestSource))
+        if (!string.IsNullOrWhiteSpace(settings.ConfigSource))
         {
-            _settings.ManifestSource = settings.ManifestSource;
+            _settings.ConfigSource = settings.ConfigSource;
         }
 
         _settings.DisplayMode = string.IsNullOrWhiteSpace(settings.DisplayMode) ? _config.DefaultDisplayMode : settings.DisplayMode;
@@ -666,20 +758,24 @@ public partial class MainWindow : Window
         return values;
     }
 
-    private static bool IsUserManifestOverride(string value)
+    private static string ResolveManifestFromConfig(string manifestSource, string configSource)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (Uri.TryCreate(manifestSource, UriKind.Absolute, out var manifestUri)
+            && (manifestUri.Scheme == Uri.UriSchemeHttp
+                || manifestUri.Scheme == Uri.UriSchemeHttps
+                || manifestUri.IsFile))
         {
-            return false;
+            return manifestSource;
         }
 
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
-            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        if (Uri.TryCreate(configSource, UriKind.Absolute, out var configUri)
+            && (configUri.Scheme == Uri.UriSchemeHttp || configUri.Scheme == Uri.UriSchemeHttps))
         {
-            return true;
+            return new Uri(configUri, manifestSource).ToString();
         }
 
-        return !value.StartsWith("https://l2.lammeronline.com/updater/", StringComparison.OrdinalIgnoreCase);
+        var configDirectory = Path.GetDirectoryName(Path.GetFullPath(configSource));
+        return Path.GetFullPath(Path.Combine(configDirectory ?? AppContext.BaseDirectory, manifestSource));
     }
 
     private void RefreshSettingsSummary()
@@ -687,6 +783,7 @@ public partial class MainWindow : Window
         ClientDirectoryText.Text = string.IsNullOrWhiteSpace(_settings.ClientDirectory)
             ? "Client folder: Not selected"
             : "Client folder: " + _settings.ClientDirectory;
+        ConfigSourceText.Text = "Config: " + (string.IsNullOrWhiteSpace(_settings.ConfigSource) ? "auto" : _settings.ConfigSource);
     }
 
     private static (int Width, int Height) ParseResolution(string value)

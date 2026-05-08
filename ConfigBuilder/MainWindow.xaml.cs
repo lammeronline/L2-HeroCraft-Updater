@@ -72,6 +72,7 @@ public partial class MainWindow : Window
             PlayButtonText = string.IsNullOrWhiteSpace(PlayButtonTextBox.Text) ? "PLAY" : PlayButtonTextBox.Text.Trim(),
             ShowClientSettings = ShowClientSettingsBox.IsChecked == true,
             RequireUpdateBeforePlay = RequireUpdateBeforePlayBox.IsChecked == true,
+            AutoLoginEnabled = AutoLoginEnabledBox.IsChecked == true,
             GameExecutables = ParseLines(GameExecutablesBox.Text),
             Resolutions = ParseLines(ResolutionsBox.Text),
             DefaultDisplayMode = string.IsNullOrWhiteSpace(DefaultDisplayModeBox.Text) ? "Windowed" : DefaultDisplayModeBox.Text.Trim(),
@@ -86,6 +87,7 @@ public partial class MainWindow : Window
         PlayButtonTextBox.Text = config.PlayButtonText;
         ShowClientSettingsBox.IsChecked = config.ShowClientSettings;
         RequireUpdateBeforePlayBox.IsChecked = config.RequireUpdateBeforePlay;
+        AutoLoginEnabledBox.IsChecked = config.AutoLoginEnabled;
         DefaultAudioMuteBox.IsChecked = config.DefaultAudioMuteOn;
         GameExecutablesBox.Text = string.Join(Environment.NewLine, config.GameExecutables);
         ResolutionsBox.Text = string.Join(Environment.NewLine, config.Resolutions);

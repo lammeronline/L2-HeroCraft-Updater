@@ -16,6 +16,9 @@ public sealed class LauncherConfig
     [JsonPropertyName("requireUpdateBeforePlay")]
     public bool RequireUpdateBeforePlay { get; init; }
 
+    [JsonPropertyName("autoLoginEnabled")]
+    public bool AutoLoginEnabled { get; init; }
+
     [JsonPropertyName("gameExecutables")]
     public List<string> GameExecutables { get; init; } = ["system/l2.exe", "l2.exe"];
 

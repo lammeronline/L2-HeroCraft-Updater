@@ -18,7 +18,7 @@ public partial class SettingsWindow : Window
         _originalSettings = settings;
         _showClientSettings = showClientSettings;
         ClientDirectoryBox.Text = settings.ClientDirectory;
-        ManifestSourceBox.Text = settings.ManifestSource;
+        ConfigSourceBox.Text = settings.ConfigSource;
         ClientSettingsPanel.Visibility = showClientSettings ? Visibility.Visible : Visibility.Collapsed;
         ApplyButton.Visibility = showClientSettings ? Visibility.Visible : Visibility.Collapsed;
         FillResolutionBox(resolutions, settings.Resolution);
@@ -31,7 +31,7 @@ public partial class SettingsWindow : Window
         return new LauncherSettings
         {
             ClientDirectory = ClientDirectoryBox.Text,
-            ManifestSource = ManifestSourceBox.Text,
+            ConfigSource = ConfigSourceBox.Text,
             DisplayMode = _showClientSettings
                 ? GetComboBoxText(DisplayModeBox, "Windowed")
                 : _originalSettings.DisplayMode,
@@ -60,22 +60,43 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void BrowseManifestButton_Click(object sender, RoutedEventArgs e)
+    private void BrowseConfigButton_Click(object sender, RoutedEventArgs e)
     {
-        var manifestDirectory = Path.GetDirectoryName(ManifestSourceBox.Text);
+        var configDirectory = GetExistingDirectory(ConfigSourceBox.Text);
         var dialog = new OpenFileDialog
         {
-            Title = "Select manifest",
-            FileName = "manifest.json",
-            Filter = "JSON manifest (*.json)|*.json|All files (*.*)|*.*",
-            InitialDirectory = Directory.Exists(manifestDirectory)
-                ? manifestDirectory
-                : AppContext.BaseDirectory
+            Title = "Select launcher config",
+            FileName = "config.json",
+            Filter = "JSON config (*.json)|*.json|All files (*.*)|*.*",
+            InitialDirectory = configDirectory ?? AppContext.BaseDirectory
         };
 
         if (dialog.ShowDialog(this) == true)
         {
-            ManifestSourceBox.Text = dialog.FileName;
+            ConfigSourceBox.Text = dialog.FileName;
+        }
+    }
+
+    private static string? GetExistingDirectory(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        try
+        {
+            if (Directory.Exists(value))
+            {
+                return value;
+            }
+
+            var directory = Path.GetDirectoryName(value);
+            return Directory.Exists(directory) ? directory : null;
+        }
+        catch
+        {
+            return null;
         }
     }
 

@@ -133,6 +133,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -166,13 +167,17 @@
                             <TextBlock Text="Default resolution" Style="{StaticResource LabelTextStyle}" />
                             <TextBox x:Name="DefaultResolutionBox" />
                         </StackPanel>
-                        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,18">
-                            <CheckBox x:Name="ShowClientSettingsBox" Content="Show client settings" Margin="0,0,22,0" />
-                            <CheckBox x:Name="RequireUpdateBeforePlayBox" Content="Check before play" Margin="0,0,22,0" />
-                            <CheckBox x:Name="DefaultAudioMuteBox" Content="Mute by default" />
+                        <StackPanel Grid.Row="5" Grid.ColumnSpan="3" Margin="0,0,0,18">
+                            <TextBlock Text="Options" Style="{StaticResource LabelTextStyle}" />
+                            <WrapPanel>
+                                <CheckBox x:Name="ShowClientSettingsBox" Content="Show client settings" Margin="0,0,22,8" />
+                                <CheckBox x:Name="RequireUpdateBeforePlayBox" Content="Check before play" Margin="0,0,22,8" />
+                                <CheckBox x:Name="AutoLoginEnabledBox" Content="Enable AutoLogin button" Margin="0,0,22,8" />
+                                <CheckBox x:Name="DefaultAudioMuteBox" Content="Mute by default" Margin="0,0,22,8" />
+                            </WrapPanel>
                         </StackPanel>
 
-                        <Grid Grid.Row="5" Grid.ColumnSpan="3">
+                        <Grid Grid.Row="6" Grid.ColumnSpan="3">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />

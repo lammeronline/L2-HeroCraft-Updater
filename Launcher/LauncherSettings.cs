@@ -7,7 +7,7 @@ public sealed class LauncherSettings
 {
     public string ClientDirectory { get; set; } = string.Empty;
 
-    public string ManifestSource { get; set; } = string.Empty;
+    public string ConfigSource { get; set; } = string.Empty;
 
     public string DisplayMode { get; set; } = "Windowed";
 

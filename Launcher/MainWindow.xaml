@@ -156,9 +156,11 @@
                     <TextBlock Text="L2 Modern Updater" FontSize="30" FontWeight="Bold" />
                     <TextBlock Text="A clean launch desk for updates, repairs and server news" Foreground="{StaticResource TextMutedBrush}" FontSize="13" Margin="0,4,0,0" />
                     <TextBlock x:Name="ClientDirectoryText" Text="Client folder: Not selected" Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="0,10,0,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="ConfigSourceText" Text="Config: auto" Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="AutoLoginButton" Content="AutoLogin" Width="112" Margin="0,0,12,0" Visibility="Collapsed" Click="AutoLoginButton_Click" />
                     <Button x:Name="SettingsButton" Content="Settings" Width="104" Margin="0,0,12,0" ToolTip="Settings" Click="SettingsButton_Click" />
                     <Button x:Name="PlayButton" Content="PLAY" Width="190" Height="58"
                             Style="{StaticResource PlayButtonStyle}" Click="PlayButton_Click" />
@@ -174,13 +176,13 @@
                 <Grid Grid.Column="0" Margin="0,0,18,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
                     <Border Grid.Row="0" Background="{StaticResource HeroBrush}" BorderBrush="#3B3441" BorderThickness="1" CornerRadius="8" Padding="24">
                         <Grid>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
@@ -222,30 +224,28 @@
                                 <TextBlock x:Name="OverallProgressText" Grid.Row="2" Grid.Column="1" Text="0%" Foreground="{StaticResource TextMutedBrush}" FontSize="11" />
                                 <ProgressBar x:Name="MainProgressBar" Grid.Row="3" Grid.ColumnSpan="2" Minimum="0" Maximum="100" Value="0" Margin="0,6,0,0" />
                             </Grid>
+
+                            <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="0,22,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Maintenance" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Text="Verify, repair, or download pending files." Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="0,4,0,0" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button x:Name="CheckButton" Content="CHECK" Width="104" Margin="0,0,10,0" Click="CheckButton_Click" />
+                                    <Button x:Name="RepairButton" Content="REPAIR" Width="104" Margin="0,0,10,0" Background="{StaticResource DangerBrush}" BorderBrush="#D06A70" Click="RepairButton_Click" />
+                                    <Button x:Name="UpdateButton" Content="UPDATE" Width="104" Background="{StaticResource BlueBrush}" BorderBrush="#6790D6" Click="UpdateButton_Click" />
+                                </StackPanel>
+                            </Grid>
                         </Grid>
                     </Border>
 
-                    <Border Grid.Row="1" Style="{StaticResource PanelBorderStyle}" Margin="0,18,0,18">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Maintenance" Style="{StaticResource SectionTitleStyle}" />
-                                <TextBlock Text="Verify files, repair damaged content, or download pending updates." Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="0,4,0,0" />
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button x:Name="CheckButton" Content="CHECK" Width="104" Margin="0,0,10,0" Click="CheckButton_Click" />
-                                <Button x:Name="RepairButton" Content="REPAIR" Width="104" Margin="0,0,10,0" Background="{StaticResource DangerBrush}" BorderBrush="#D06A70" Click="RepairButton_Click" />
-                                <Button x:Name="UpdateButton" Content="UPDATE" Width="104" Background="{StaticResource BlueBrush}" BorderBrush="#6790D6" Click="UpdateButton_Click" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Row="2" Style="{StaticResource PanelBorderStyle}" Padding="0">
+                    <Border Grid.Row="1" Style="{StaticResource PanelBorderStyle}" Padding="0" Margin="0,18,0,0">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
