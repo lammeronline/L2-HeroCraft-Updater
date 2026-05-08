@@ -264,19 +264,9 @@
                             <TextBlock Text="News" Style="{StaticResource SectionTitleStyle}" />
                         </StackPanel>
 
-                        <ListBox x:Name="NewsList" Grid.Row="1" Background="#141821" BorderBrush="#303440" Foreground="#F6F1E8" Padding="4">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border BorderBrush="#2C303B" BorderThickness="0,0,0,1" Padding="8,10" Margin="0,0,0,2">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding PublishedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" Foreground="{StaticResource AccentBrush}" FontSize="11" Margin="0,3,0,7" />
-                                            <TextBlock Text="{Binding Body}" Foreground="{StaticResource TextSoftBrush}" TextWrapping="Wrap" LineHeight="18" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                        <Border Grid.Row="1" Background="#141821" BorderBrush="#303440" BorderThickness="1">
+                            <WebBrowser x:Name="NewsBrowser" />
+                        </Border>
                     </Grid>
                 </Border>
             </Grid>

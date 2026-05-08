@@ -7,6 +7,9 @@ public sealed class LauncherConfig
     [JsonPropertyName("manifestUrl")]
     public string ManifestUrl { get; init; } = "https://l2.lammeronline.com/updater/manifest.json";
 
+    [JsonPropertyName("newsUrl")]
+    public string NewsUrl { get; init; } = "https://l2.lammeronline.com/updater/news.html";
+
     [JsonPropertyName("playButtonText")]
     public string PlayButtonText { get; init; } = "PLAY";
 

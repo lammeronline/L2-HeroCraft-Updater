@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private IReadOnlyList<string> _resolutions = LauncherConfig.CreateDefault().Resolutions;
     private string _configSource = DefaultConfigUrl;
     private string _manifestSource = LauncherConfig.CreateDefault().ManifestUrl;
+    private string _newsSource = LauncherConfig.CreateDefault().NewsUrl;
     private bool _hasSavedSettings;
     private bool _isBusy;
 
@@ -251,7 +252,6 @@ public partial class MainWindow : Window
             AppendUpdaterLog("Loading manifest: " + manifestSource);
 
             _manifest = await ManifestStore.LoadAsync(manifestSource, _httpClient);
-            NewsList.ItemsSource = _manifest.News;
             AppendUpdaterLog($"Manifest version {_manifest.Version}, files: {_manifest.Files.Count}.");
 
             if (await TrySelfUpdateAsync(_manifest))
@@ -438,6 +438,11 @@ public partial class MainWindow : Window
         {
             _manifestSource = ResolveManifestFromConfig(config.ManifestUrl, configSource);
         }
+
+        _newsSource = string.IsNullOrWhiteSpace(config.NewsUrl)
+            ? string.Empty
+            : ResolveManifestFromConfig(config.NewsUrl, configSource);
+        LoadNewsPage();
 
         PlayButton.Content = string.IsNullOrWhiteSpace(config.PlayButtonText) ? "PLAY" : config.PlayButtonText;
         AutoLoginButton.Visibility = config.AutoLoginEnabled ? Visibility.Visible : Visibility.Collapsed;
@@ -784,6 +789,25 @@ public partial class MainWindow : Window
             ? "Not selected"
             : _settings.ClientDirectory;
         ConfigSourceText.Text = "Config: " + (string.IsNullOrWhiteSpace(_settings.ConfigSource) ? "auto" : _settings.ConfigSource);
+    }
+
+    private void LoadNewsPage()
+    {
+        if (string.IsNullOrWhiteSpace(_newsSource))
+        {
+            NewsBrowser.Navigate("about:blank");
+            return;
+        }
+
+        try
+        {
+            NewsBrowser.Navigate(_newsSource);
+        }
+        catch (Exception ex)
+        {
+            AppendLog("News page skipped: " + ex.Message);
+            NewsBrowser.Navigate("about:blank");
+        }
     }
 
     private static (int Width, int Height) ParseResolution(string value)

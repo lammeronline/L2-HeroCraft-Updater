@@ -69,6 +69,7 @@ public partial class MainWindow : Window
         return new LauncherConfig
         {
             ManifestUrl = ManifestUrlBox.Text.Trim(),
+            NewsUrl = NewsUrlBox.Text.Trim(),
             PlayButtonText = string.IsNullOrWhiteSpace(PlayButtonTextBox.Text) ? "PLAY" : PlayButtonTextBox.Text.Trim(),
             ShowClientSettings = ShowClientSettingsBox.IsChecked == true,
             RequireUpdateBeforePlay = RequireUpdateBeforePlayBox.IsChecked == true,
@@ -84,6 +85,7 @@ public partial class MainWindow : Window
     private void ApplyConfig(LauncherConfig config)
     {
         ManifestUrlBox.Text = config.ManifestUrl;
+        NewsUrlBox.Text = config.NewsUrl;
         PlayButtonTextBox.Text = config.PlayButtonText;
         ShowClientSettingsBox.IsChecked = config.ShowClientSettings;
         RequireUpdateBeforePlayBox.IsChecked = config.RequireUpdateBeforePlay;
