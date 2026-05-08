@@ -53,6 +53,8 @@ public sealed class FileDownloadService
                     TotalFiles = totalFiles,
                     CompletedBytes = completedBytes,
                     TotalBytes = totalBytes,
+                    CurrentFileCompletedBytes = GetTransferSize(item.File),
+                    CurrentFileTotalBytes = GetTransferSize(item.File),
                     CurrentPath = item.File.Path
                 });
                 continue;
@@ -88,6 +90,8 @@ public sealed class FileDownloadService
                     TotalFiles = totalFiles,
                     CompletedBytes = completedBytes,
                     TotalBytes = totalBytes,
+                    CurrentFileCompletedBytes = item.File.Size,
+                    CurrentFileTotalBytes = item.File.Size,
                     CurrentPath = item.File.Path
                 });
                 continue;
@@ -132,6 +136,8 @@ public sealed class FileDownloadService
                         TotalFiles = totalFiles,
                         CompletedBytes = completedBytes + downloadedForCurrentFile,
                         TotalBytes = totalBytes,
+                        CurrentFileCompletedBytes = downloadedForCurrentFile,
+                        CurrentFileTotalBytes = item.File.Size,
                         CurrentPath = item.File.Path
                     });
                 }
@@ -151,6 +157,8 @@ public sealed class FileDownloadService
                 TotalFiles = totalFiles,
                 CompletedBytes = completedBytes,
                 TotalBytes = totalBytes,
+                CurrentFileCompletedBytes = GetTransferSize(item.File),
+                CurrentFileTotalBytes = GetTransferSize(item.File),
                 CurrentPath = item.File.Path
             });
         }
@@ -269,6 +277,7 @@ public sealed class FileDownloadService
     {
         var buffer = new byte[1024 * 128];
         long copiedBytes = 0;
+        var currentFileTotalBytes = input.CanSeek ? input.Length : 0;
         int read;
         while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0)
         {
@@ -280,6 +289,8 @@ public sealed class FileDownloadService
                 TotalFiles = totalFiles,
                 CompletedBytes = completedBytesBeforeFile + copiedBytes,
                 TotalBytes = totalBytes,
+                CurrentFileCompletedBytes = copiedBytes,
+                CurrentFileTotalBytes = currentFileTotalBytes,
                 CurrentPath = displayPath
             });
         }
@@ -348,6 +359,8 @@ public sealed class FileDownloadService
                     TotalFiles = totalFiles,
                     CompletedBytes = completedBytesBeforeFile + copiedBytes,
                     TotalBytes = totalBytes,
+                    CurrentFileCompletedBytes = copiedBytes,
+                    CurrentFileTotalBytes = item.File.Size,
                     CurrentPath = item.File.Path
                 });
             }

@@ -1,5 +1,4 @@
 using L2ModernUpdater.Core;
-using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -29,7 +28,13 @@ public partial class MainWindow : Window
     private IReadOnlyList<ExtraFileResult> _extraFiles = [];
     private UpdateManifest? _manifest;
     private LauncherConfig _config = LauncherConfig.CreateDefault();
-    private bool _suppressSettingsSave = true;
+    private LauncherSettings _settings = new()
+    {
+        ClientDirectory = Environment.CurrentDirectory,
+        ManifestSource = DefaultManifestUrl
+    };
+    private IReadOnlyList<string> _resolutions = LauncherConfig.CreateDefault().Resolutions;
+    private bool _isBusy;
 
     public MainWindow()
     {
@@ -40,8 +45,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _downloadService = new FileDownloadService(_httpClient);
 
-        GameDirectoryBox.Text = Environment.CurrentDirectory;
-        ManifestSourceBox.Text = DefaultManifestUrl;
+        RefreshSettingsSummary();
         AppendLog("Launcher started.");
         _ = LoadStartupAsync();
     }
@@ -76,12 +80,11 @@ public partial class MainWindow : Window
             AppendUpdaterLog($"Downloading {_pendingUpdates.Count} file(s).");
             var progress = new Progress<DownloadProgress>(value =>
             {
-                var percent = value.TotalBytes == 0 ? 100 : value.CompletedBytes * 100d / value.TotalBytes;
-                SetStatus("Downloading", value.CurrentPath, percent);
+                SetDownloadStatus("Downloading", value);
                 TransferText.Text = $"{value.CompletedFiles} / {value.TotalFiles}";
             });
 
-            await _downloadService.DownloadAsync(_pendingUpdates, GameDirectoryBox.Text, progress);
+            await _downloadService.DownloadAsync(_pendingUpdates, _settings.ClientDirectory, progress);
             AppendUpdaterLog("Download complete. Verifying files.");
 
             await CheckFilesAsync(VerificationMode.Fast, keepBusy: true);
@@ -89,7 +92,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             AppendUpdaterLog("Update failed: " + ex.Message);
-            SetStatus("Update failed", ex.Message, MainProgressBar.Value);
+            SetStatus("Update failed", ex.Message, MainProgressBar.Value, CurrentFileProgressBar.Value);
         }
         finally
         {
@@ -101,18 +104,22 @@ public partial class MainWindow : Window
     {
         try
         {
-            var clientDirectory = GameDirectoryBox.Text;
+            var clientDirectory = _settings.ClientDirectory;
             if (_config.RequireUpdateBeforePlay)
             {
                 await CheckFilesAsync(VerificationMode.Fast);
                 if (_pendingUpdates.Count > 0)
                 {
-                    SetStatus("Update required", "Update files before launch.", MainProgressBar.Value);
+                    SetStatus("Update required", "Update files before launch.", MainProgressBar.Value, CurrentFileProgressBar.Value);
+                    UpdatePlayButtonState();
                     return;
                 }
             }
 
-            await ApplyClientSettingsAsync(clientDirectory);
+            if (_config.ShowClientSettings)
+            {
+                await ApplyClientSettingsAsync(clientDirectory);
+            }
 
             var candidates = _config.GameExecutables
                 .Where(path => !string.IsNullOrWhiteSpace(path))
@@ -123,7 +130,7 @@ public partial class MainWindow : Window
             if (executable is null)
             {
                 AppendLog("Game executable was not found.");
-                SetStatus("Cannot launch", "Game executable was not found.", MainProgressBar.Value);
+                SetStatus("Cannot launch", "Game executable was not found.", MainProgressBar.Value, CurrentFileProgressBar.Value);
                 return;
             }
 
@@ -139,68 +146,42 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             AppendLog("Launch failed: " + ex.Message);
-            SetStatus("Launch failed", ex.Message, MainProgressBar.Value);
+            SetStatus("Launch failed", ex.Message, MainProgressBar.Value, CurrentFileProgressBar.Value);
         }
     }
 
-    private async void ApplySettingsButton_Click(object sender, RoutedEventArgs e)
+    private async void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
-        try
+        var window = new SettingsWindow(_settings, _resolutions, _config.ShowClientSettings)
         {
-            await SaveSettingsAsync();
-            await ApplyClientSettingsAsync(GameDirectoryBox.Text);
-            SetStatus("Settings applied", "Client settings updated.", MainProgressBar.Value);
-        }
-        catch (Exception ex)
-        {
-            AppendLog("Settings apply failed: " + ex.Message);
-            SetStatus("Settings failed", ex.Message, MainProgressBar.Value);
-        }
-    }
+            Owner = this
+        };
 
-    private void ClientSettings_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_suppressSettingsSave)
+        if (window.ShowDialog() != true)
         {
             return;
         }
 
-        _ = SaveSettingsAsync();
-    }
-
-    private void BrowseButton_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFolderDialog
+        try
         {
-            Title = "Select Lineage II client folder",
-            InitialDirectory = Directory.Exists(GameDirectoryBox.Text)
-                ? GameDirectoryBox.Text
-                : Environment.CurrentDirectory
-        };
+            _settings = window.CreateSettings();
+            RefreshSettingsSummary();
+            await SaveSettingsAsync();
 
-        if (dialog.ShowDialog(this) == true)
-        {
-            GameDirectoryBox.Text = dialog.FolderName;
-            _ = SaveSettingsAsync();
+            if (window.ShouldApplySettings)
+            {
+                await ApplyClientSettingsAsync(_settings.ClientDirectory);
+                SetStatus("Settings applied", "Client settings updated.", MainProgressBar.Value, CurrentFileProgressBar.Value);
+            }
+            else
+            {
+                SetStatus("Settings saved", "Launch preferences updated.", MainProgressBar.Value, CurrentFileProgressBar.Value);
+            }
         }
-    }
-
-    private void BrowseManifestButton_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog
+        catch (Exception ex)
         {
-            Title = "Select manifest",
-            FileName = "manifest.json",
-            Filter = "JSON manifest (*.json)|*.json|All files (*.*)|*.*",
-            InitialDirectory = Directory.Exists(Path.GetDirectoryName(ManifestSourceBox.Text))
-                ? Path.GetDirectoryName(ManifestSourceBox.Text)
-                : _appDirectory
-        };
-
-        if (dialog.ShowDialog(this) == true)
-        {
-            ManifestSourceBox.Text = dialog.FileName;
-            _ = SaveSettingsAsync();
+            AppendLog("Settings update failed: " + ex.Message);
+            SetStatus("Settings failed", ex.Message, MainProgressBar.Value, CurrentFileProgressBar.Value);
         }
     }
 
@@ -223,12 +204,11 @@ public partial class MainWindow : Window
             AppendUpdaterLog($"Repair downloading {_pendingUpdates.Count} file(s).");
             var progress = new Progress<DownloadProgress>(value =>
             {
-                var percent = value.TotalBytes == 0 ? 100 : value.CompletedBytes * 100d / value.TotalBytes;
-                SetStatus("Repairing", value.CurrentPath, percent);
+                SetDownloadStatus("Repairing", value);
                 TransferText.Text = $"{value.CompletedFiles} / {value.TotalFiles}";
             });
 
-            await _downloadService.DownloadAsync(_pendingUpdates, GameDirectoryBox.Text, progress);
+            await _downloadService.DownloadAsync(_pendingUpdates, _settings.ClientDirectory, progress);
             AppendUpdaterLog("Repair download complete. Running full verification.");
 
             await CheckFilesAsync(VerificationMode.Full, keepBusy: true);
@@ -242,7 +222,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             AppendUpdaterLog("Repair failed: " + ex.Message);
-            SetStatus("Repair failed", ex.Message, MainProgressBar.Value);
+            SetStatus("Repair failed", ex.Message, MainProgressBar.Value, CurrentFileProgressBar.Value);
         }
         finally
         {
@@ -259,7 +239,7 @@ public partial class MainWindow : Window
                 SetBusy(true);
             }
 
-            var manifestSource = ResolveManifestSource(ManifestSourceBox.Text);
+            var manifestSource = ResolveManifestSource(_settings.ManifestSource);
             await SaveSettingsAsync();
             AppendUpdaterLog("Loading manifest: " + manifestSource);
 
@@ -275,13 +255,18 @@ public partial class MainWindow : Window
             var progress = new Progress<VerificationProgress>(value =>
             {
                 var percent = value.Total == 0 ? 100 : value.Completed * 100d / value.Total;
-                SetStatus(mode == VerificationMode.Fast ? "Fast checking" : "Full checking", value.CurrentPath, percent);
+                SetStatus(
+                    mode == VerificationMode.Fast ? "Fast checking" : "Full checking",
+                    value.CurrentPath,
+                    percent,
+                    currentFileProgress: 0,
+                    currentFileIndeterminate: value.Completed < value.Total);
                 TransferText.Text = $"{value.Completed} / {value.Total}";
             });
 
-            _pendingUpdates = await _verificationService.VerifyAsync(_manifest, GameDirectoryBox.Text, mode, progress);
+            _pendingUpdates = await _verificationService.VerifyAsync(_manifest, _settings.ClientDirectory, mode, progress);
             _extraFiles = ShouldReportExtraFiles(_manifest)
-                ? _extraFileScanService.FindExtraFiles(_manifest, GameDirectoryBox.Text)
+                ? _extraFileScanService.FindExtraFiles(_manifest, _settings.ClientDirectory)
                 : [];
 
             if (_pendingUpdates.Count == 0)
@@ -301,12 +286,13 @@ public partial class MainWindow : Window
                 AppendUpdaterLog($"Update required: {_pendingUpdates.Count} file(s), {missing} missing, {outdated} outdated{extraText}.");
             }
 
+            UpdatePlayButtonState();
             LogExtraFilePreview();
         }
         catch (Exception ex)
         {
             AppendUpdaterLog("Check failed: " + ex.Message);
-            SetStatus("Check failed", ex.Message, MainProgressBar.Value);
+            SetStatus("Check failed", ex.Message, MainProgressBar.Value, CurrentFileProgressBar.Value);
         }
         finally
         {
@@ -328,19 +314,63 @@ public partial class MainWindow : Window
         return Path.GetFullPath(source);
     }
 
-    private void SetStatus(string status, string currentFile, double progress)
+    private void SetStatus(
+        string status,
+        string currentFile,
+        double overallProgress,
+        double? currentFileProgress = null,
+        bool currentFileIndeterminate = false)
     {
         StatusText.Text = status;
         CurrentFileText.Text = currentFile;
-        MainProgressBar.Value = Math.Clamp(progress, 0, 100);
+        SetProgress(MainProgressBar, OverallProgressText, overallProgress);
+
+        CurrentFileProgressBar.IsIndeterminate = currentFileIndeterminate;
+        if (currentFileIndeterminate)
+        {
+            CurrentFileProgressText.Text = "Working";
+        }
+        else
+        {
+            SetProgress(CurrentFileProgressBar, CurrentFileProgressText, currentFileProgress ?? (overallProgress >= 100 ? 100 : 0));
+        }
+    }
+
+    private void SetDownloadStatus(string status, DownloadProgress value)
+    {
+        var overallPercent = value.TotalBytes == 0 ? 100 : value.CompletedBytes * 100d / value.TotalBytes;
+        var currentFileIndeterminate = value.CurrentFileTotalBytes <= 0;
+        var currentFilePercent = currentFileIndeterminate
+            ? 0
+            : value.CurrentFileCompletedBytes * 100d / value.CurrentFileTotalBytes;
+
+        SetStatus(status, value.CurrentPath, overallPercent, currentFilePercent, currentFileIndeterminate);
+    }
+
+    private static void SetProgress(ProgressBar progressBar, TextBlock progressText, double value)
+    {
+        var percent = Math.Clamp(value, 0, 100);
+        progressBar.Value = percent;
+        progressText.Text = percent.ToString("0") + "%";
     }
 
     private void SetBusy(bool busy)
     {
+        _isBusy = busy;
         CheckButton.IsEnabled = !busy;
         RepairButton.IsEnabled = !busy;
         UpdateButton.IsEnabled = !busy;
-        PlayButton.IsEnabled = !busy;
+        SettingsButton.IsEnabled = !busy;
+        UpdatePlayButtonState();
+    }
+
+    private void UpdatePlayButtonState()
+    {
+        var updateRequired = _config.RequireUpdateBeforePlay && _pendingUpdates.Count > 0;
+        PlayButton.IsEnabled = !_isBusy && !updateRequired;
+        PlayButton.ToolTip = updateRequired
+            ? "Update files before launch."
+            : null;
     }
 
     private void AppendLog(string message)
@@ -382,15 +412,16 @@ public partial class MainWindow : Window
     {
         if (!string.IsNullOrWhiteSpace(config.ManifestUrl))
         {
-            ManifestSourceBox.Text = config.ManifestUrl;
+            _settings.ManifestSource = config.ManifestUrl;
         }
 
         PlayButton.Content = string.IsNullOrWhiteSpace(config.PlayButtonText) ? "PLAY" : config.PlayButtonText;
-        ClientSettingsPanel.Visibility = config.ShowClientSettings ? Visibility.Visible : Visibility.Collapsed;
-        FillResolutionBox(config.Resolutions, config.DefaultResolution);
-        SelectComboBoxItem(DisplayModeBox, string.IsNullOrWhiteSpace(config.DefaultDisplayMode) ? "Windowed" : config.DefaultDisplayMode);
-        SelectComboBoxItem(ResolutionBox, string.IsNullOrWhiteSpace(config.DefaultResolution) ? "1920x1080" : config.DefaultResolution);
-        AudioMuteBox.IsChecked = config.DefaultAudioMuteOn;
+        _resolutions = BuildResolutionList(config.Resolutions);
+        _settings.DisplayMode = string.IsNullOrWhiteSpace(config.DefaultDisplayMode) ? "Windowed" : config.DefaultDisplayMode;
+        _settings.Resolution = string.IsNullOrWhiteSpace(config.DefaultResolution) ? "1920x1080" : config.DefaultResolution;
+        _settings.AudioMuteOn = config.DefaultAudioMuteOn;
+        RefreshSettingsSummary();
+        UpdatePlayButtonState();
     }
 
     private async Task LoadSettingsAsync()
@@ -399,34 +430,26 @@ public partial class MainWindow : Window
 
         if (!string.IsNullOrWhiteSpace(settings.ClientDirectory))
         {
-            GameDirectoryBox.Text = settings.ClientDirectory;
+            _settings.ClientDirectory = settings.ClientDirectory;
         }
 
         if (IsUserManifestOverride(settings.ManifestSource))
         {
-            ManifestSourceBox.Text = settings.ManifestSource;
+            _settings.ManifestSource = settings.ManifestSource;
         }
 
-        SelectComboBoxItem(DisplayModeBox, string.IsNullOrWhiteSpace(settings.DisplayMode) ? _config.DefaultDisplayMode : settings.DisplayMode);
-        SelectComboBoxItem(ResolutionBox, string.IsNullOrWhiteSpace(settings.Resolution) ? _config.DefaultResolution : settings.Resolution);
-        AudioMuteBox.IsChecked = settings.AudioMuteOn;
+        _settings.DisplayMode = string.IsNullOrWhiteSpace(settings.DisplayMode) ? _config.DefaultDisplayMode : settings.DisplayMode;
+        _settings.Resolution = string.IsNullOrWhiteSpace(settings.Resolution) ? _config.DefaultResolution : settings.Resolution;
+        _settings.AudioMuteOn = settings.AudioMuteOn;
 
-        _suppressSettingsSave = false;
+        RefreshSettingsSummary();
+        UpdatePlayButtonState();
         AppendLog("Settings loaded.");
     }
 
     private Task SaveSettingsAsync()
     {
-        var settings = new LauncherSettings
-        {
-            ClientDirectory = GameDirectoryBox.Text,
-            ManifestSource = ManifestSourceBox.Text,
-            DisplayMode = GetComboBoxText(DisplayModeBox, "Windowed"),
-            Resolution = GetComboBoxText(ResolutionBox, "1920x1080"),
-            AudioMuteOn = AudioMuteBox.IsChecked == true
-        };
-
-        return SaveSettingsCoreAsync(settings);
+        return SaveSettingsCoreAsync(_settings);
     }
 
     private async Task SaveSettingsCoreAsync(LauncherSettings settings)
@@ -499,7 +522,7 @@ public partial class MainWindow : Window
         }
 
         AppendUpdaterLog($"Launcher update found: {launcher.Version}");
-        SetStatus("Updating launcher", launcher.Url, 0);
+        SetStatus("Updating launcher", launcher.Url, 0, 0);
 
         var updateDirectory = Path.Combine(Path.GetTempPath(), "L2ModernUpdater");
         Directory.CreateDirectory(updateDirectory);
@@ -588,13 +611,13 @@ public partial class MainWindow : Window
         var systemDirectory = Path.Combine(clientDirectory, "system");
         var optionPath = Path.Combine(systemDirectory, "Option.ini");
         var l2IniPath = Path.Combine(systemDirectory, "l2.ini");
-        var mode = GetComboBoxText(DisplayModeBox, "Windowed");
-        var resolution = GetComboBoxText(ResolutionBox, "1920x1080");
+        var mode = string.IsNullOrWhiteSpace(_settings.DisplayMode) ? "Windowed" : _settings.DisplayMode;
+        var resolution = string.IsNullOrWhiteSpace(_settings.Resolution) ? "1920x1080" : _settings.Resolution;
         var (width, height) = ParseResolution(resolution);
         var fullscreen = string.Equals(mode, "Fullscreen", StringComparison.OrdinalIgnoreCase);
         var borderless = string.Equals(mode, "Borderless", StringComparison.OrdinalIgnoreCase);
 
-        await UpdateOptionIniAsync(optionPath, width, height, fullscreen, AudioMuteBox.IsChecked == true);
+        await UpdateOptionIniAsync(optionPath, width, height, fullscreen, _settings.AudioMuteOn);
 
         if (File.Exists(l2IniPath) && !fullscreen)
         {
@@ -605,7 +628,7 @@ public partial class MainWindow : Window
             AppendLog("l2.ini was not found. Window frame setting skipped.");
         }
 
-        AppendLog($"Client settings applied: {mode}, {width}x{height}, mute={AudioMuteBox.IsChecked == true}.");
+        AppendLog($"Client settings applied: {mode}, {width}x{height}, mute={_settings.AudioMuteOn}.");
     }
 
     private static async Task UpdateOptionIniAsync(
@@ -628,19 +651,7 @@ public partial class MainWindow : Window
         await File.WriteAllLinesAsync(path, lines);
     }
 
-    private void SelectComboBoxItem(ComboBox comboBox, string value)
-    {
-        foreach (var item in comboBox.Items.OfType<ComboBoxItem>())
-        {
-            if (string.Equals(item.Content?.ToString(), value, StringComparison.OrdinalIgnoreCase))
-            {
-                comboBox.SelectedItem = item;
-                return;
-            }
-        }
-    }
-
-    private void FillResolutionBox(IEnumerable<string> resolutions, string defaultResolution)
+    private static IReadOnlyList<string> BuildResolutionList(IEnumerable<string> resolutions)
     {
         var values = resolutions
             .Where(value => !string.IsNullOrWhiteSpace(value))
@@ -652,13 +663,7 @@ public partial class MainWindow : Window
             values = LauncherConfig.CreateDefault().Resolutions;
         }
 
-        ResolutionBox.Items.Clear();
-        foreach (var value in values)
-        {
-            ResolutionBox.Items.Add(new ComboBoxItem { Content = value });
-        }
-
-        SelectComboBoxItem(ResolutionBox, string.IsNullOrWhiteSpace(defaultResolution) ? values[0] : defaultResolution);
+        return values;
     }
 
     private static bool IsUserManifestOverride(string value)
@@ -677,11 +682,11 @@ public partial class MainWindow : Window
         return !value.StartsWith("https://l2.lammeronline.com/updater/", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string GetComboBoxText(ComboBox comboBox, string fallback)
+    private void RefreshSettingsSummary()
     {
-        return (comboBox.SelectedItem as ComboBoxItem)?.Content?.ToString()
-            ?? comboBox.Text
-            ?? fallback;
+        ClientDirectoryText.Text = string.IsNullOrWhiteSpace(_settings.ClientDirectory)
+            ? "Client folder: Not selected"
+            : "Client folder: " + _settings.ClientDirectory;
     }
 
     private static (int Width, int Height) ParseResolution(string value)

@@ -10,5 +10,9 @@ public sealed class DownloadProgress
 
     public required long TotalBytes { get; init; }
 
+    public required long CurrentFileCompletedBytes { get; init; }
+
+    public required long CurrentFileTotalBytes { get; init; }
+
     public required string CurrentPath { get; init; }
 }
