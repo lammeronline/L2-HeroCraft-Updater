@@ -781,8 +781,8 @@ public partial class MainWindow : Window
     private void RefreshSettingsSummary()
     {
         ClientDirectoryText.Text = string.IsNullOrWhiteSpace(_settings.ClientDirectory)
-            ? "Client folder: Not selected"
-            : "Client folder: " + _settings.ClientDirectory;
+            ? "Not selected"
+            : _settings.ClientDirectory;
         ConfigSourceText.Text = "Config: " + (string.IsNullOrWhiteSpace(_settings.ConfigSource) ? "auto" : _settings.ConfigSource);
     }
 
