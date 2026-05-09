@@ -72,8 +72,8 @@ public partial class MainWindow : Window
         {
             ManifestUrl = ManifestUrlBox.Text.Trim(),
             NewsUrl = NewsUrlBox.Text.Trim(),
-            PlayButtonText = string.IsNullOrWhiteSpace(PlayButtonTextBox.Text) ? "PLAY" : PlayButtonTextBox.Text.Trim(),
             ShowClientSettings = ShowClientSettingsBox.IsChecked == true,
+            ShowNews = ShowNewsBox.IsChecked == true,
             RequireUpdateBeforePlay = RequireUpdateBeforePlayBox.IsChecked == true,
             AutoLoginEnabled = AutoLoginEnabledBox.IsChecked == true,
             GameExecutables = ParseLines(GameExecutablesBox.Text),
@@ -88,8 +88,8 @@ public partial class MainWindow : Window
     {
         ManifestUrlBox.Text = config.ManifestUrl;
         NewsUrlBox.Text = config.NewsUrl;
-        PlayButtonTextBox.Text = config.PlayButtonText;
         ShowClientSettingsBox.IsChecked = config.ShowClientSettings;
+        ShowNewsBox.IsChecked = config.ShowNews;
         RequireUpdateBeforePlayBox.IsChecked = config.RequireUpdateBeforePlay;
         AutoLoginEnabledBox.IsChecked = config.AutoLoginEnabled;
         DefaultAudioMuteBox.IsChecked = config.DefaultAudioMuteOn;

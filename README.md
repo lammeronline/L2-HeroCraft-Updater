@@ -13,7 +13,7 @@ Shared patching logic lives in `Updater.Core`.
 ## Features
 
 - Local or remote `config.json` bootstrap.
-- Server-controlled `manifestUrl`, `newsUrl`, Play text, AutoLogin visibility and client settings visibility.
+- Server-controlled `manifestUrl`, `newsUrl`, AutoLogin visibility and client settings visibility.
 - Fast check by file size and full repair by SHA256.
 - Current-file and total progress bars.
 - Safe manifest paths through root-directory validation.
@@ -146,6 +146,7 @@ Important fields:
 
 - `manifestUrl` - manifest location. Can be absolute or relative to `config.json`.
 - `newsUrl` - remote HTML page shown in the news panel. Leave empty to show a blank panel.
+- `showNews` - shows or hides the remote news panel. Defaults to `false`.
 - `showClientSettings` - hides the settings section that edits client INI files.
 - `requireUpdateBeforePlay` - disables Play until fast check passes.
 - `autoLoginEnabled` - shows or hides the AutoLogin button.

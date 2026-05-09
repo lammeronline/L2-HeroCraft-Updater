@@ -161,29 +161,26 @@
                         </StackPanel>
 
                         <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,12,12">
-                            <TextBlock Text="Play button" Style="{StaticResource LabelTextStyle}" />
-                            <TextBox x:Name="PlayButtonTextBox" />
-                        </StackPanel>
-                        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12">
                             <TextBlock Text="Default mode" Style="{StaticResource LabelTextStyle}" />
                             <TextBox x:Name="DefaultDisplayModeBox" />
                         </StackPanel>
 
-                        <StackPanel Grid.Row="5" Grid.Column="0" Margin="0,0,12,12">
+                        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12">
                             <TextBlock Text="Default resolution" Style="{StaticResource LabelTextStyle}" />
                             <TextBox x:Name="DefaultResolutionBox" />
                         </StackPanel>
-                        <StackPanel Grid.Row="6" Grid.ColumnSpan="3" Margin="0,0,0,18">
+                        <StackPanel Grid.Row="5" Grid.ColumnSpan="3" Margin="0,0,0,18">
                             <TextBlock Text="Options" Style="{StaticResource LabelTextStyle}" />
                             <WrapPanel>
                                 <CheckBox x:Name="ShowClientSettingsBox" Content="Show client settings" Margin="0,0,22,8" />
+                                <CheckBox x:Name="ShowNewsBox" Content="Show news panel" Margin="0,0,22,8" />
                                 <CheckBox x:Name="RequireUpdateBeforePlayBox" Content="Check before play" Margin="0,0,22,8" />
                                 <CheckBox x:Name="AutoLoginEnabledBox" Content="Enable AutoLogin button" Margin="0,0,22,8" />
                                 <CheckBox x:Name="DefaultAudioMuteBox" Content="Mute by default" Margin="0,0,22,8" />
                             </WrapPanel>
                         </StackPanel>
 
-                        <Grid Grid.Row="7" Grid.ColumnSpan="3">
+                        <Grid Grid.Row="6" Grid.ColumnSpan="3">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />

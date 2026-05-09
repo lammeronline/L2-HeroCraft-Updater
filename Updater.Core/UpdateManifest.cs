@@ -25,7 +25,4 @@ public sealed class UpdateManifest
 
     [JsonPropertyName("launcher")]
     public LauncherUpdateInfo? Launcher { get; init; }
-
-    [JsonPropertyName("news")]
-    public List<NewsItem> News { get; init; } = [];
 }

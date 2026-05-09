@@ -16,9 +16,9 @@ public sealed class LauncherConfig
     [JsonPropertyName("newsUrl")]
     public string NewsUrl { get; init; } = "https://yoursite.com/updater/news.html";
 
-    /// <summary>Caption for the main launch button.</summary>
-    [JsonPropertyName("playButtonText")]
-    public string PlayButtonText { get; init; } = "PLAY";
+    /// <summary>Controls visibility of the remote news panel.</summary>
+    [JsonPropertyName("showNews")]
+    public bool ShowNews { get; init; }
 
     /// <summary>Controls whether players can see and edit client video/audio options.</summary>
     [JsonPropertyName("showClientSettings")]

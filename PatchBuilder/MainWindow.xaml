@@ -164,9 +164,6 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -226,22 +223,9 @@
                                 </StackPanel>
                                 <Button Grid.Row="7" Grid.Column="1" Content="Browse" Width="96" VerticalAlignment="Bottom" Margin="0,0,0,12" Click="BrowseLauncherButton_Click" />
 
-                                <StackPanel Grid.Row="8" Grid.ColumnSpan="2" Margin="0,0,0,18">
+                                <StackPanel Grid.Row="8" Grid.ColumnSpan="2">
                                     <TextBlock Text="Launcher URL" Style="{StaticResource LabelTextStyle}" />
                                     <TextBox x:Name="LauncherUrlBox" />
-                                </StackPanel>
-
-                                <TextBlock Grid.Row="9" Grid.ColumnSpan="2" Text="News" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,14" />
-
-                                <StackPanel Grid.Row="10" Grid.ColumnSpan="2" Margin="0,0,0,12">
-                                    <TextBlock Text="News title" Style="{StaticResource LabelTextStyle}" />
-                                    <TextBox x:Name="NewsTitleBox" />
-                                </StackPanel>
-
-                                <StackPanel Grid.Row="11" Grid.ColumnSpan="2">
-                                    <TextBlock Text="News body" Style="{StaticResource LabelTextStyle}" />
-                                    <TextBox x:Name="NewsBodyBox" Height="82"
-                                             AcceptsReturn="True" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Grid>
                         </StackPanel>

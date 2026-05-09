@@ -94,6 +94,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -108,12 +109,14 @@
                     </StackPanel>
                     <Button Grid.Row="1" Grid.Column="1" Content="Browse" Width="96" VerticalAlignment="Bottom" Margin="0,0,0,12" Click="BrowseClientButton_Click" />
 
-                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,0">
-                        <TextBlock Text="Config source" Style="{StaticResource LabelTextStyle}" />
+                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,12">
+                        <TextBlock Text="Config URL / file" Style="{StaticResource LabelTextStyle}" />
                         <TextBox x:Name="ConfigSourceBox" />
-                        <TextBlock Text="Leave empty to use local config.json first, then remote config." Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="0,5,0,0" />
+                        <TextBlock Text="Use https://.../config.json for remote settings. Empty uses the built-in URL; local config.json is only fallback." Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="0,5,0,0" TextWrapping="Wrap" />
                     </StackPanel>
-                    <Button Grid.Row="2" Grid.Column="1" Content="Browse" Width="96" VerticalAlignment="Bottom" Click="BrowseConfigButton_Click" />
+                    <Button Grid.Row="2" Grid.Column="1" Content="Browse" Width="96" VerticalAlignment="Bottom" Margin="0,0,0,12" Click="BrowseConfigButton_Click" />
+
+                    <CheckBox x:Name="ShowLogBox" Grid.Row="3" Grid.ColumnSpan="2" Content="Show activity log" />
                 </Grid>
             </Border>
 

@@ -16,6 +16,8 @@ public sealed class LauncherSettings
 
     public bool AudioMuteOn { get; set; }
 
+    public bool ShowLog { get; set; } = true;
+
     public DateTimeOffset SavedAt { get; set; } = DateTimeOffset.Now;
 
     public static async Task<LauncherSettings> LoadAsync(string path)

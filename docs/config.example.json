@@ -1,7 +1,7 @@
 {
   "manifestUrl": "https://yoursite.com/updater/manifest.json",
   "newsUrl": "https://yoursite.com/updater/news.html",
-  "playButtonText": "PLAY",
+  "showNews": false,
   "showClientSettings": true,
   "requireUpdateBeforePlay": true,
   "autoLoginEnabled": false,

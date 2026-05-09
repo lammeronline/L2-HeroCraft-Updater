@@ -12,7 +12,7 @@ namespace Launcher;
 // config/bootstrap, verification/update, launch, self-update, client settings and UI helpers.
 public partial class MainWindow : Window
 {
-    private const string DefaultConfigUrl = "https://yoursite.com/updater/config.json";
+    private const string DefaultConfigUrl = "https://l2.lammeronline.com/updater/config.json";
     private const string LocalConfigFileName = "config.json";
     private readonly string _appDirectory = AppContext.BaseDirectory;
     private readonly string _settingsPath;
@@ -184,7 +184,7 @@ public partial class MainWindow : Window
 
     private async void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
-        var window = new SettingsWindow(_settings, _resolutions, _config.ShowClientSettings)
+        var window = new SettingsWindow(_settings, _resolutions, _config.ShowClientSettings, DefaultConfigUrl)
         {
             Owner = this
         };
@@ -385,6 +385,7 @@ public partial class MainWindow : Window
     private static void SetProgress(ProgressBar progressBar, TextBlock progressText, double value)
     {
         var percent = Math.Clamp(value, 0, 100);
+        progressBar.IsIndeterminate = false;
         progressBar.Value = percent;
         progressText.Text = percent.ToString("0") + "%";
     }
@@ -434,31 +435,46 @@ public partial class MainWindow : Window
 
     private async Task LoadConfigAsync()
     {
-        try
+        var errors = new List<string>();
+
+        foreach (var configSource in ResolveConfigSources())
         {
-            _configSource = ResolveConfigSource();
-            _config = await LauncherConfigStore.LoadAsync(_configSource, _configHttpClient);
-            ApplyConfig(_config, _configSource);
-            AppendLog("Config loaded: " + _configSource);
+            try
+            {
+                _configSource = configSource;
+                _config = await LauncherConfigStore.LoadAsync(_configSource, _configHttpClient);
+                ApplyConfig(_config, _configSource);
+                AppendLog("Config loaded: " + _configSource);
+                return;
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"{configSource}: {ex.Message}");
+                AppendLog("Config source failed: " + configSource + " - " + ex.Message);
+            }
         }
-        catch (Exception ex)
-        {
-            _config = LauncherConfig.CreateDefault();
-            _configSource = DefaultConfigUrl;
-            ApplyConfig(_config, _configSource);
-            AppendLog("Config skipped: " + ex.Message);
-        }
+
+        _config = LauncherConfig.CreateDefault();
+        _configSource = DefaultConfigUrl;
+        ApplyConfig(_config, _configSource);
+        AppendLog("Config skipped: " + string.Join(" | ", errors));
     }
 
-    private string ResolveConfigSource()
+    private IEnumerable<string> ResolveConfigSources()
     {
         if (!string.IsNullOrWhiteSpace(_settings.ConfigSource))
         {
-            return _settings.ConfigSource;
+            yield return _settings.ConfigSource;
+            yield break;
         }
 
+        yield return DefaultConfigUrl;
+
         var localConfig = Path.Combine(_appDirectory, LocalConfigFileName);
-        return File.Exists(localConfig) ? localConfig : DefaultConfigUrl;
+        if (File.Exists(localConfig))
+        {
+            yield return localConfig;
+        }
     }
 
     private void ApplyConfig(LauncherConfig config, string configSource)
@@ -471,9 +487,9 @@ public partial class MainWindow : Window
         _newsSource = string.IsNullOrWhiteSpace(config.NewsUrl)
             ? string.Empty
             : ResolveManifestFromConfig(config.NewsUrl, configSource);
+        ApplyNewsVisibility(config.ShowNews);
         LoadNewsPage();
 
-        PlayButton.Content = string.IsNullOrWhiteSpace(config.PlayButtonText) ? "PLAY" : config.PlayButtonText;
         AutoLoginButton.Visibility = config.AutoLoginEnabled ? Visibility.Visible : Visibility.Collapsed;
         _resolutions = BuildResolutionList(config.Resolutions);
         if (!_hasSavedSettings)
@@ -594,6 +610,7 @@ public partial class MainWindow : Window
         _settings.DisplayMode = string.IsNullOrWhiteSpace(settings.DisplayMode) ? _config.DefaultDisplayMode : settings.DisplayMode;
         _settings.Resolution = string.IsNullOrWhiteSpace(settings.Resolution) ? _config.DefaultResolution : settings.Resolution;
         _settings.AudioMuteOn = settings.AudioMuteOn;
+        _settings.ShowLog = settings.ShowLog;
 
         RefreshSettingsSummary();
         UpdatePlayButtonState();
@@ -862,11 +879,29 @@ public partial class MainWindow : Window
             ? "Not selected"
             : _settings.ClientDirectory;
         ConfigSourceText.Text = "Config: " + (string.IsNullOrWhiteSpace(_settings.ConfigSource) ? "auto" : _settings.ConfigSource);
+        ApplyLogVisibility();
+    }
+
+    private void ApplyLogVisibility()
+    {
+        if (_settings.ShowLog)
+        {
+            LogPanel.Visibility = Visibility.Visible;
+            LogRow.Height = new GridLength(1, GridUnitType.Star);
+            ProgressCardRow.Height = GridLength.Auto;
+            ProgressCard.Margin = new Thickness(0, 18, 0, 0);
+            return;
+        }
+
+        LogPanel.Visibility = Visibility.Collapsed;
+        LogRow.Height = new GridLength(1, GridUnitType.Star);
+        ProgressCardRow.Height = GridLength.Auto;
+        ProgressCard.Margin = new Thickness(0);
     }
 
     private void LoadNewsPage()
     {
-        if (string.IsNullOrWhiteSpace(_newsSource))
+        if (NewsPanel.Visibility != Visibility.Visible || string.IsNullOrWhiteSpace(_newsSource))
         {
             NewsBrowser.Navigate("about:blank");
             return;
@@ -881,6 +916,23 @@ public partial class MainWindow : Window
             AppendLog("News page skipped: " + ex.Message);
             NewsBrowser.Navigate("about:blank");
         }
+    }
+
+    private void ApplyNewsVisibility(bool showNews)
+    {
+        if (showNews)
+        {
+            NewsPanel.Visibility = Visibility.Visible;
+            MainContentColumn.Width = new GridLength(2.05, GridUnitType.Star);
+            NewsColumn.Width = new GridLength(1.05, GridUnitType.Star);
+            MainContentPanel.Margin = new Thickness(0, 0, 18, 0);
+            return;
+        }
+
+        NewsPanel.Visibility = Visibility.Collapsed;
+        MainContentColumn.Width = new GridLength(1, GridUnitType.Star);
+        NewsColumn.Width = new GridLength(0);
+        MainContentPanel.Margin = new Thickness(0);
     }
 
     private static (int Width, int Height) ParseResolution(string value)

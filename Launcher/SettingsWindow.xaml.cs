@@ -9,16 +9,25 @@ public partial class SettingsWindow : Window
 {
     private readonly LauncherSettings _originalSettings;
     private readonly bool _showClientSettings;
+    private readonly string _defaultConfigSource;
     public bool ShouldApplySettings { get; private set; }
 
-    public SettingsWindow(LauncherSettings settings, IEnumerable<string> resolutions, bool showClientSettings)
+    public SettingsWindow(
+        LauncherSettings settings,
+        IEnumerable<string> resolutions,
+        bool showClientSettings,
+        string defaultConfigSource)
     {
         InitializeComponent();
 
         _originalSettings = settings;
         _showClientSettings = showClientSettings;
+        _defaultConfigSource = defaultConfigSource;
         ClientDirectoryBox.Text = settings.ClientDirectory;
-        ConfigSourceBox.Text = settings.ConfigSource;
+        ConfigSourceBox.Text = string.IsNullOrWhiteSpace(settings.ConfigSource)
+            ? _defaultConfigSource
+            : settings.ConfigSource;
+        ShowLogBox.IsChecked = settings.ShowLog;
         ClientSettingsPanel.Visibility = showClientSettings ? Visibility.Visible : Visibility.Collapsed;
         ApplyButton.Visibility = showClientSettings ? Visibility.Visible : Visibility.Collapsed;
         FillResolutionBox(resolutions, settings.Resolution);
@@ -31,7 +40,9 @@ public partial class SettingsWindow : Window
         return new LauncherSettings
         {
             ClientDirectory = ClientDirectoryBox.Text,
-            ConfigSource = ConfigSourceBox.Text,
+            ConfigSource = string.Equals(ConfigSourceBox.Text.Trim(), _defaultConfigSource, StringComparison.OrdinalIgnoreCase)
+                ? string.Empty
+                : ConfigSourceBox.Text.Trim(),
             DisplayMode = _showClientSettings
                 ? GetComboBoxText(DisplayModeBox, "Windowed")
                 : _originalSettings.DisplayMode,
@@ -40,7 +51,8 @@ public partial class SettingsWindow : Window
                 : _originalSettings.Resolution,
             AudioMuteOn = _showClientSettings
                 ? AudioMuteBox.IsChecked == true
-                : _originalSettings.AudioMuteOn
+                : _originalSettings.AudioMuteOn,
+            ShowLog = ShowLogBox.IsChecked == true
         };
     }
 

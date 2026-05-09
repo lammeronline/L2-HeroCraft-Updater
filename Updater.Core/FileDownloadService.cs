@@ -189,6 +189,7 @@ public sealed class FileDownloadService
             totalFiles,
             completedBytesBeforeFile,
             totalBytes,
+            GetTransferSize(item.File),
             progress,
             cancellationToken);
 
@@ -236,6 +237,7 @@ public sealed class FileDownloadService
         int totalFiles,
         long completedBytesBeforeFile,
         long totalBytes,
+        long expectedCurrentFileTotalBytes,
         IProgress<DownloadProgress>? progress,
         CancellationToken cancellationToken)
     {
@@ -253,7 +255,17 @@ public sealed class FileDownloadService
 
             await using var input = new FileStream(localSourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 128, true);
             await using var output = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 128, true);
-            await CopyWithProgressAsync(input, output, displayPath, fileIndex, totalFiles, completedBytesBeforeFile, totalBytes, progress, cancellationToken);
+            await CopyWithProgressAsync(
+                input,
+                output,
+                displayPath,
+                fileIndex,
+                totalFiles,
+                completedBytesBeforeFile,
+                totalBytes,
+                expectedCurrentFileTotalBytes,
+                progress,
+                cancellationToken);
             return;
         }
 
@@ -265,7 +277,17 @@ public sealed class FileDownloadService
 
         await using var httpInput = await response.Content.ReadAsStreamAsync(cancellationToken);
         await using var httpOutput = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 128, true);
-        await CopyWithProgressAsync(httpInput, httpOutput, displayPath, fileIndex, totalFiles, completedBytesBeforeFile, totalBytes, progress, cancellationToken);
+        await CopyWithProgressAsync(
+            httpInput,
+            httpOutput,
+            displayPath,
+            fileIndex,
+            totalFiles,
+            completedBytesBeforeFile,
+            totalBytes,
+            expectedCurrentFileTotalBytes,
+            progress,
+            cancellationToken);
     }
 
     private static async Task CopyWithProgressAsync(
@@ -276,12 +298,15 @@ public sealed class FileDownloadService
         int totalFiles,
         long completedBytesBeforeFile,
         long totalBytes,
+        long expectedCurrentFileTotalBytes,
         IProgress<DownloadProgress>? progress,
         CancellationToken cancellationToken)
     {
         var buffer = new byte[1024 * 128];
         long copiedBytes = 0;
-        var currentFileTotalBytes = input.CanSeek ? input.Length : 0;
+        var currentFileTotalBytes = expectedCurrentFileTotalBytes > 0
+            ? expectedCurrentFileTotalBytes
+            : input.CanSeek ? input.Length : 0;
         int read;
         while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0)
         {
