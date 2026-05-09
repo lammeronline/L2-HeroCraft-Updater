@@ -18,6 +18,27 @@ public partial class AutoLoginWindow : Window
         _ = LoadAccountsAsync();
     }
 
+    private void MinimizeWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
+        MaximizeWindowButton.ToolTip = WindowState == WindowState.Maximized
+            ? "Restore"
+            : "Maximize";
+    }
+
+    private void CloseWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
     private async Task LoadAccountsAsync()
     {
         var accounts = await AutoLoginAccountStore.LoadAsync(_accountsPath);

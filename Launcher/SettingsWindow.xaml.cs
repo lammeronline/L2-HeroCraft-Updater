@@ -56,6 +56,27 @@ public partial class SettingsWindow : Window
         };
     }
 
+    private void MinimizeWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
+        MaximizeWindowButton.ToolTip = WindowState == WindowState.Maximized
+            ? "Restore"
+            : "Maximize";
+    }
+
+    private void CloseWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
     private void BrowseClientButton_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog

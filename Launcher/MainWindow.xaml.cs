@@ -53,6 +53,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _downloadService = new FileDownloadService(_httpClient);
 
+        SetStatus("Loading config", "Preparing launcher", 0, 0);
         RefreshSettingsSummary();
         AppendLog("Launcher started.");
         _ = LoadStartupAsync();
@@ -201,6 +202,7 @@ public partial class MainWindow : Window
             await SaveSettingsAsync();
             _hasSavedSettings = true;
             await LoadConfigAsync();
+            await LoadManifestAsync();
 
             if (window.ShouldApplySettings)
             {
@@ -431,6 +433,7 @@ public partial class MainWindow : Window
     {
         await LoadSettingsAsync();
         await LoadConfigAsync();
+        await LoadManifestAsync();
     }
 
     private async Task LoadConfigAsync()
@@ -501,6 +504,38 @@ public partial class MainWindow : Window
 
         RefreshSettingsSummary();
         UpdatePlayButtonState();
+    }
+
+    private async Task LoadManifestAsync()
+    {
+        try
+        {
+            var manifestSource = ResolveManifestSource(_manifestSource);
+            SetStatus("Loading manifest", manifestSource, 0, 0);
+            AppendUpdaterLog("Loading manifest: " + manifestSource);
+
+            _manifest = await ManifestStore.LoadAsync(manifestSource, _httpClient);
+            AppendUpdaterLog($"Manifest version {_manifest.Version}, files: {_manifest.Files.Count}.");
+
+            if (await TrySelfUpdateAsync(_manifest))
+            {
+                return;
+            }
+
+            TransferText.Text = $"0 / {_manifest.Files.Count}";
+            SetStatus("Ready", $"Manifest loaded. {_manifest.Files.Count} files.", 0, 0);
+            UpdatePlayButtonState();
+        }
+        catch (Exception ex)
+        {
+            _manifest = null;
+            _pendingUpdates = [];
+            _extraFiles = [];
+            TransferText.Text = "0 / 0";
+            AppendUpdaterLog("Manifest load failed: " + ex.Message);
+            SetStatus("Manifest failed", ex.Message, 0, 0);
+            UpdatePlayButtonState();
+        }
     }
 
     private async Task<bool> EnsureReadyToLaunchAsync()
@@ -887,16 +922,16 @@ public partial class MainWindow : Window
         if (_settings.ShowLog)
         {
             LogPanel.Visibility = Visibility.Visible;
-            LogRow.Height = new GridLength(1, GridUnitType.Star);
-            ProgressCardRow.Height = GridLength.Auto;
-            ProgressCard.Margin = new Thickness(0, 18, 0, 0);
+            TopContentRow.Height = new GridLength(1, GridUnitType.Star);
+            BottomControlsRow.Height = GridLength.Auto;
+            BottomControlsPanel.Margin = new Thickness(0, 28, 0, 0);
             return;
         }
 
         LogPanel.Visibility = Visibility.Collapsed;
-        LogRow.Height = new GridLength(1, GridUnitType.Star);
-        ProgressCardRow.Height = GridLength.Auto;
-        ProgressCard.Margin = new Thickness(0);
+        TopContentRow.Height = new GridLength(1, GridUnitType.Star);
+        BottomControlsRow.Height = GridLength.Auto;
+        BottomControlsPanel.Margin = new Thickness(0, 0, 0, 0);
     }
 
     private void LoadNewsPage()
@@ -925,14 +960,14 @@ public partial class MainWindow : Window
             NewsPanel.Visibility = Visibility.Visible;
             MainContentColumn.Width = new GridLength(2.05, GridUnitType.Star);
             NewsColumn.Width = new GridLength(1.05, GridUnitType.Star);
-            MainContentPanel.Margin = new Thickness(0, 0, 18, 0);
+            LogPanel.Margin = new Thickness(0, 0, 18, 0);
             return;
         }
 
         NewsPanel.Visibility = Visibility.Collapsed;
         MainContentColumn.Width = new GridLength(1, GridUnitType.Star);
         NewsColumn.Width = new GridLength(0);
-        MainContentPanel.Margin = new Thickness(0);
+        LogPanel.Margin = new Thickness(0);
     }
 
     private static (int Width, int Height) ParseResolution(string value)
