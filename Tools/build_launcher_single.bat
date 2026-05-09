@@ -7,7 +7,7 @@ set DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 set DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 if not exist build mkdir build
-if not exist build\LauncherSingle mkdir build\LauncherSingle
+if not exist build\updater mkdir build\updater
 
 dotnet restore .\Launcher\Launcher.csproj -r win-x64 --source https://api.nuget.org/v3/index.json
 if errorlevel 1 exit /b %errorlevel%
@@ -16,7 +16,7 @@ dotnet publish .\Launcher\Launcher.csproj ^
   -c Release ^
   -r win-x64 ^
   --self-contained true ^
-  -o .\build\LauncherSingle ^
+  -o .\build\updater ^
   --no-restore ^
   -p:PublishSingleFile=true ^
   -p:IncludeNativeLibrariesForSelfExtract=true ^
@@ -26,7 +26,7 @@ dotnet publish .\Launcher\Launcher.csproj ^
 if errorlevel 1 exit /b %errorlevel%
 
 echo.
-echo Single-file launcher build completed: %CD%\build\LauncherSingle\Launcher.exe
+echo Single-file launcher build completed: %CD%\build\updater\Launcher.exe
 
 popd
 endlocal

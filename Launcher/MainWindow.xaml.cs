@@ -58,6 +58,28 @@ public partial class MainWindow : Window
         _ = LoadStartupAsync();
     }
 
+    // Window commands
+    private void MinimizeWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
+        MaximizeWindowButton.ToolTip = WindowState == WindowState.Maximized
+            ? "Restore"
+            : "Maximize";
+    }
+
+    private void CloseWindowButton_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
     // Toolbar commands
     private async void CheckButton_Click(object sender, RoutedEventArgs e)
     {
