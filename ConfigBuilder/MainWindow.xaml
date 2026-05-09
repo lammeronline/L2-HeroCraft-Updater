@@ -1,7 +1,7 @@
 <Window x:Class="ConfigBuilder.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Config Builder" Height="780" Width="940" MinHeight="720" MinWidth="860"
+        Title="Config Builder" Height="680" Width="1040" MinHeight="620" MinWidth="900"
         Background="#0F1117" Foreground="#F6F1E8" FontFamily="Segoe UI">
     <Window.Resources>
         <SolidColorBrush x:Key="SurfaceBrush" Color="#191B24" />
@@ -23,7 +23,7 @@
             <Setter Property="BorderBrush" Value="{StaticResource StrokeSoftBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="18" />
+            <Setter Property="Padding" Value="14" />
         </Style>
 
         <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
@@ -39,8 +39,8 @@
         </Style>
 
         <Style TargetType="Button">
-            <Setter Property="MinHeight" Value="38" />
-            <Setter Property="Padding" Value="18,8" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Padding" Value="14,6" />
             <Setter Property="Foreground" Value="#F6F1E8" />
             <Setter Property="Background" Value="#2A2E3A" />
             <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
@@ -76,8 +76,8 @@
         </Style>
 
         <Style TargetType="TextBox">
-            <Setter Property="MinHeight" Value="36" />
-            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="9,5" />
             <Setter Property="Foreground" Value="#F6F1E8" />
             <Setter Property="Background" Value="{StaticResource SurfaceDeepBrush}" />
             <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
@@ -92,39 +92,39 @@
     </Window.Resources>
 
     <Grid Background="{StaticResource WindowBackgroundBrush}">
-        <Grid Margin="26">
+        <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid Grid.Row="0" Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Config Builder" FontSize="30" FontWeight="Bold" />
+                    <TextBlock Text="Config Builder" FontSize="26" FontWeight="Bold" />
                     <TextBlock Text="Launcher behavior, defaults and publish metadata" Foreground="{StaticResource TextMutedBrush}" FontSize="13" Margin="0,4,0,0" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="LOAD" Width="112" Height="48" Margin="0,0,10,0" Click="LoadButton_Click" />
-                    <Button Content="SAVE" Width="150" Height="48" Background="{StaticResource AccentBrush}"
+                    <Button Content="LOAD" Width="104" Height="40" Margin="0,0,10,0" Click="LoadButton_Click" />
+                    <Button Content="SAVE" Width="132" Height="40" Background="{StaticResource AccentBrush}"
                             BorderBrush="{StaticResource AccentBrush}" Foreground="#17120A" FontSize="16"
                             Click="SaveButton_Click" />
                 </StackPanel>
             </Grid>
 
             <Grid Grid.Row="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.25*" />
+                    <ColumnDefinition Width="0.95*" />
+                </Grid.ColumnDefinitions>
 
-                <Border Style="{StaticResource PanelBorderStyle}" Margin="0,0,0,18">
+                <Border Grid.Column="0" Style="{StaticResource PanelBorderStyle}" Margin="0,0,16,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -142,41 +142,41 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="Launcher config" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,14" />
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="Launcher config" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,10" />
 
-                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,10,12">
+                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,10,10">
                             <TextBlock Text="Config file" Style="{StaticResource LabelTextStyle}" />
                             <TextBox x:Name="ConfigFileBox" />
                         </StackPanel>
-                        <Button Grid.Row="1" Grid.Column="2" Content="Browse" Width="96" VerticalAlignment="Bottom" Margin="0,0,0,12" Click="BrowseConfigButton_Click" />
+                        <Button Grid.Row="1" Grid.Column="2" Content="Browse" Width="88" VerticalAlignment="Bottom" Margin="0,0,0,10" Click="BrowseConfigButton_Click" />
 
-                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,0,0,12">
+                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,0,0,10">
                             <TextBlock Text="Manifest URL" Style="{StaticResource LabelTextStyle}" />
                             <TextBox x:Name="ManifestUrlBox" />
                         </StackPanel>
 
-                        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,0,0,12">
+                        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,0,0,10">
                             <TextBlock Text="News page URL" Style="{StaticResource LabelTextStyle}" />
                             <TextBox x:Name="NewsUrlBox" />
                         </StackPanel>
 
-                        <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,12,12">
+                        <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,12,10">
                             <TextBlock Text="Default mode" Style="{StaticResource LabelTextStyle}" />
                             <TextBox x:Name="DefaultDisplayModeBox" />
                         </StackPanel>
 
-                        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12">
+                        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,10">
                             <TextBlock Text="Default resolution" Style="{StaticResource LabelTextStyle}" />
                             <TextBox x:Name="DefaultResolutionBox" />
                         </StackPanel>
-                        <StackPanel Grid.Row="5" Grid.ColumnSpan="3" Margin="0,0,0,18">
+                        <StackPanel Grid.Row="5" Grid.ColumnSpan="3" Margin="0,0,0,12">
                             <TextBlock Text="Options" Style="{StaticResource LabelTextStyle}" />
                             <WrapPanel>
-                                <CheckBox x:Name="ShowClientSettingsBox" Content="Show client settings" Margin="0,0,22,8" />
-                                <CheckBox x:Name="ShowNewsBox" Content="Show news panel" Margin="0,0,22,8" />
-                                <CheckBox x:Name="RequireUpdateBeforePlayBox" Content="Check before play" Margin="0,0,22,8" />
-                                <CheckBox x:Name="AutoLoginEnabledBox" Content="Enable AutoLogin button" Margin="0,0,22,8" />
-                                <CheckBox x:Name="DefaultAudioMuteBox" Content="Mute by default" Margin="0,0,22,8" />
+                                <CheckBox x:Name="ShowClientSettingsBox" Content="Client settings" Margin="0,0,18,6" />
+                                <CheckBox x:Name="ShowNewsBox" Content="News panel" Margin="0,0,18,6" />
+                                <CheckBox x:Name="RequireUpdateBeforePlayBox" Content="Check before play" Margin="0,0,18,6" />
+                                <CheckBox x:Name="AutoLoginEnabledBox" Content="AutoLogin" Margin="0,0,18,6" />
+                                <CheckBox x:Name="DefaultAudioMuteBox" Content="Mute by default" Margin="0,0,18,6" />
                             </WrapPanel>
                         </StackPanel>
 
@@ -188,14 +188,14 @@
 
                             <StackPanel Margin="0,0,12,0">
                                 <TextBlock Text="Game exe list" Style="{StaticResource LabelTextStyle}" />
-                                <TextBox x:Name="GameExecutablesBox" Height="86"
+                                <TextBox x:Name="GameExecutablesBox" Height="74"
                                          AcceptsReturn="True" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12"
                                          TextWrapping="NoWrap" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="1">
                                 <TextBlock Text="Resolutions" Style="{StaticResource LabelTextStyle}" />
-                                <TextBox x:Name="ResolutionsBox" Height="86"
+                                <TextBox x:Name="ResolutionsBox" Height="74"
                                          AcceptsReturn="True" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12"
                                          TextWrapping="NoWrap" />
                             </StackPanel>
@@ -203,7 +203,7 @@
                     </Grid>
                 </Border>
 
-                <Border Grid.Row="1" Style="{StaticResource PanelBorderStyle}" Padding="0">
+                <Border Grid.Column="1" Style="{StaticResource PanelBorderStyle}" Padding="0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -217,7 +217,7 @@
                 </Border>
             </Grid>
 
-            <TextBlock Grid.Row="2" Text="Upload config.json to /updater/config.json" Foreground="{StaticResource TextMutedBrush}" Margin="0,16,0,0" />
+            <TextBlock Grid.Row="2" Text="Upload config.json to /updater/config.json" Foreground="{StaticResource TextMutedBrush}" Margin="0,10,0,0" />
         </Grid>
     </Grid>
 </Window>
