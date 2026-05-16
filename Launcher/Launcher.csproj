@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Updater.Core\Updater.Core.csproj" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2651.64" />
   </ItemGroup>
 
   <ItemGroup>

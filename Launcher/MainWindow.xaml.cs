@@ -27,20 +27,22 @@ public partial class MainWindow : Window
     private readonly FileVerificationService _verificationService = new();
     private readonly ExtraFileScanService _extraFileScanService = new();
     private readonly FileDownloadService _downloadService;
+    private static readonly LauncherConfig DefaultConfig = LauncherConfig.CreateDefault();
     private IReadOnlyList<FileVerificationResult> _pendingUpdates = [];
     private IReadOnlyList<ExtraFileResult> _extraFiles = [];
     private UpdateManifest? _manifest;
-    private LauncherConfig _config = LauncherConfig.CreateDefault();
+    private LauncherConfig _config = DefaultConfig;
     private LauncherSettings _settings = new()
     {
         ClientDirectory = Environment.CurrentDirectory
     };
-    private IReadOnlyList<string> _resolutions = LauncherConfig.CreateDefault().Resolutions;
+    private IReadOnlyList<string> _resolutions = DefaultConfig.Resolutions;
     private string _configSource = DefaultConfigUrl;
-    private string _manifestSource = LauncherConfig.CreateDefault().ManifestUrl;
-    private string _newsSource = LauncherConfig.CreateDefault().NewsUrl;
+    private string _manifestSource = DefaultConfig.ManifestUrl;
+    private string _newsSource = DefaultConfig.NewsUrl;
     private bool _hasSavedSettings;
     private bool _isBusy;
+    private CancellationTokenSource _cts = new();
 
     // Startup
     public MainWindow()
@@ -103,6 +105,8 @@ public partial class MainWindow : Window
                 await CheckFilesAsync(VerificationMode.Fast, keepBusy: true);
             }
 
+            _cts.Token.ThrowIfCancellationRequested();
+
             if (_pendingUpdates.Count == 0)
             {
                 SetStatus("Ready to play", "No updates required.", 100);
@@ -116,10 +120,15 @@ public partial class MainWindow : Window
                 TransferText.Text = $"{value.CompletedFiles} / {value.TotalFiles}";
             });
 
-            await _downloadService.DownloadAsync(_pendingUpdates, _settings.ClientDirectory, progress);
+            await _downloadService.DownloadAsync(_pendingUpdates, _settings.ClientDirectory, progress, _cts.Token);
             AppendUpdaterLog("Download complete. Verifying files.");
 
             await CheckFilesAsync(VerificationMode.Fast, keepBusy: true);
+        }
+        catch (OperationCanceledException)
+        {
+            AppendUpdaterLog("Update cancelled.");
+            SetStatus("Cancelled", "Update was cancelled.", MainProgressBar.Value, CurrentFileProgressBar.Value);
         }
         catch (Exception ex)
         {
@@ -230,6 +239,7 @@ public partial class MainWindow : Window
             AppendUpdaterLog("Repair started.");
 
             await CheckFilesAsync(VerificationMode.Full, keepBusy: true);
+            _cts.Token.ThrowIfCancellationRequested();
 
             if (_pendingUpdates.Count == 0)
             {
@@ -245,16 +255,23 @@ public partial class MainWindow : Window
                 TransferText.Text = $"{value.CompletedFiles} / {value.TotalFiles}";
             });
 
-            await _downloadService.DownloadAsync(_pendingUpdates, _settings.ClientDirectory, progress);
+            await _downloadService.DownloadAsync(_pendingUpdates, _settings.ClientDirectory, progress, _cts.Token);
             AppendUpdaterLog("Repair download complete. Running full verification.");
 
             await CheckFilesAsync(VerificationMode.Full, keepBusy: true);
+            _cts.Token.ThrowIfCancellationRequested();
+
             SetStatus(
                 _pendingUpdates.Count == 0 ? "Repair complete" : "Repair incomplete",
                 _pendingUpdates.Count == 0
                     ? $"All manifest files verified. Extra files: {_extraFiles.Count}."
                     : $"{_pendingUpdates.Count} file(s) still need attention.",
                 100);
+        }
+        catch (OperationCanceledException)
+        {
+            AppendUpdaterLog("Repair cancelled.");
+            SetStatus("Cancelled", "Repair was cancelled.", MainProgressBar.Value, CurrentFileProgressBar.Value);
         }
         catch (Exception ex)
         {
@@ -277,7 +294,6 @@ public partial class MainWindow : Window
             }
 
             var manifestSource = ResolveManifestSource(_manifestSource);
-            await SaveSettingsAsync();
             AppendUpdaterLog("Loading manifest: " + manifestSource);
 
             _manifest = await ManifestStore.LoadAsync(manifestSource, _httpClient);
@@ -300,7 +316,7 @@ public partial class MainWindow : Window
                 TransferText.Text = $"{value.Completed} / {value.Total}";
             });
 
-            _pendingUpdates = await _verificationService.VerifyAsync(_manifest, _settings.ClientDirectory, mode, progress);
+            _pendingUpdates = await _verificationService.VerifyAsync(_manifest, _settings.ClientDirectory, mode, progress, _cts.Token);
             _extraFiles = ShouldReportExtraFiles(_manifest)
                 ? _extraFileScanService.FindExtraFiles(_manifest, _settings.ClientDirectory)
                 : [];
@@ -324,6 +340,11 @@ public partial class MainWindow : Window
 
             UpdatePlayButtonState();
             LogExtraFilePreview();
+        }
+        catch (OperationCanceledException)
+        {
+            AppendUpdaterLog("Check cancelled.");
+            SetStatus("Cancelled", "Check was cancelled.", MainProgressBar.Value, 0);
         }
         catch (Exception ex)
         {
@@ -395,11 +416,21 @@ public partial class MainWindow : Window
     private void SetBusy(bool busy)
     {
         _isBusy = busy;
+        if (busy)
+            _cts = new CancellationTokenSource();
         CheckButton.IsEnabled = !busy;
         RepairButton.IsEnabled = !busy;
         UpdateButton.IsEnabled = !busy;
         SettingsButton.IsEnabled = !busy;
+        CancelButton.IsEnabled = busy;
         UpdatePlayButtonState();
+    }
+
+    private void CancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        _cts.Cancel();
+        CancelButton.IsEnabled = false;
+        AppendLog("Cancellation requested.");
     }
 
     private void UpdatePlayButtonState()
@@ -881,7 +912,7 @@ public partial class MainWindow : Window
 
         if (values.Count == 0)
         {
-            values = LauncherConfig.CreateDefault().Resolutions;
+            values = DefaultConfig.Resolutions.ToList();
         }
 
         return values;
@@ -938,18 +969,18 @@ public partial class MainWindow : Window
     {
         if (NewsPanel.Visibility != Visibility.Visible || string.IsNullOrWhiteSpace(_newsSource))
         {
-            NewsBrowser.Navigate("about:blank");
+            NewsBrowser.Source = new Uri("about:blank");
             return;
         }
 
         try
         {
-            NewsBrowser.Navigate(_newsSource);
+            NewsBrowser.Source = new Uri(_newsSource);
         }
         catch (Exception ex)
         {
             AppendLog("News page skipped: " + ex.Message);
-            NewsBrowser.Navigate("about:blank");
+            NewsBrowser.Source = new Uri("about:blank");
         }
     }
 

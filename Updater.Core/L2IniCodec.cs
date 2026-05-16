@@ -27,6 +27,8 @@ public static class L2IniCodec
 
     private const string LegacyPrivateExponent413 = "35";
 
+    private static readonly byte[] CachedHeader = BuildHeader();
+
     public static bool HasLineage2Ver413Header(ReadOnlySpan<byte> input)
     {
         if (input.Length < HeaderSize)
@@ -34,7 +36,7 @@ public static class L2IniCodec
             return false;
         }
 
-        return input[..HeaderSize].SequenceEqual(BuildHeader());
+        return input[..HeaderSize].SequenceEqual(CachedHeader);
     }
 
     public static byte[] Decode413(ReadOnlySpan<byte> input, bool preferLegacyRsa = true)
@@ -67,7 +69,7 @@ public static class L2IniCodec
         var encrypted = RsaTransformWithPadding(packed, ModernModulus, ModernPublicExponent, addPadding: true);
 
         var output = new byte[HeaderSize + encrypted.Length + TailSize];
-        BuildHeader().AsSpan().CopyTo(output);
+        CachedHeader.AsSpan().CopyTo(output);
         encrypted.CopyTo(output.AsSpan(HeaderSize));
 
         var checksum = Crc32.Compute(output.AsSpan(0, HeaderSize + encrypted.Length));

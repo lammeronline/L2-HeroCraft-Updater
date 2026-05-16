@@ -73,18 +73,25 @@ public sealed class FileDownloadService
                 downloadedForCurrentFile = 0;
             }
 
-            if (TryGetLocalSourcePath(item.File.Url, out var localSourcePath))
+            if (TryGetLocalSourcePath(item.File.Url, out _))
             {
-                await CopyLocalFileAsync(
-                    item,
-                    localSourcePath,
+                await DownloadSourceToFileAsync(
+                    item.File.Url,
                     tempPath,
+                    item.File.Path,
                     index,
                     totalFiles,
                     completedBytes,
                     totalBytes,
+                    item.File.Size,
                     progress,
                     cancellationToken);
+
+                var sha256 = await FileHasher.ComputeSha256Async(tempPath, cancellationToken);
+                if (!string.Equals(sha256, item.File.Sha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Copied file failed SHA256 verification: {item.File.Path}");
+                }
 
                 File.Move(tempPath, outputPath, true);
                 completedBytes += item.File.Size;
@@ -351,54 +358,4 @@ public sealed class FileDownloadService
         return false;
     }
 
-    private static async Task CopyLocalFileAsync(
-        FileVerificationResult item,
-        string localSourcePath,
-        string tempPath,
-        int fileIndex,
-        int totalFiles,
-        long completedBytesBeforeFile,
-        long totalBytes,
-        IProgress<DownloadProgress>? progress,
-        CancellationToken cancellationToken)
-    {
-        if (!File.Exists(localSourcePath))
-        {
-            throw new FileNotFoundException($"Patch source file not found: {localSourcePath}", localSourcePath);
-        }
-
-        if (File.Exists(tempPath))
-        {
-            File.Delete(tempPath);
-        }
-
-        await using (var input = new FileStream(localSourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 128, true))
-        await using (var output = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 128, true))
-        {
-            var buffer = new byte[1024 * 128];
-            long copiedBytes = 0;
-            int read;
-            while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0)
-            {
-                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-                copiedBytes += read;
-                progress?.Report(new DownloadProgress
-                {
-                    CompletedFiles = fileIndex,
-                    TotalFiles = totalFiles,
-                    CompletedBytes = completedBytesBeforeFile + copiedBytes,
-                    TotalBytes = totalBytes,
-                    CurrentFileCompletedBytes = copiedBytes,
-                    CurrentFileTotalBytes = item.File.Size,
-                    CurrentPath = item.File.Path
-                });
-            }
-        }
-
-        var actualSha256 = await FileHasher.ComputeSha256Async(tempPath, cancellationToken);
-        if (!string.Equals(actualSha256, item.File.Sha256, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException($"Copied file failed SHA256 verification: {item.File.Path}");
-        }
-    }
 }

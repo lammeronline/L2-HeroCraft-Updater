@@ -5,6 +5,7 @@ SettingsSamples/
 SettingsSapmple/
 .dotnet_home/
 .vs/
+.claude/
 *.user
 *.suo
 *.download
