@@ -12,8 +12,6 @@ namespace Launcher;
 // config/bootstrap, verification/update, launch, self-update, client settings and UI helpers.
 public partial class MainWindow : Window
 {
-    private const string DefaultConfigUrl = "https://l2.lammeronline.com/updater/config.json";
-    private const string LocalConfigFileName = "config.json";
     private readonly string _appDirectory = AppContext.BaseDirectory;
     private readonly string _settingsPath;
     private readonly string _autoLoginAccountsPath;
@@ -37,7 +35,7 @@ public partial class MainWindow : Window
         ClientDirectory = Environment.CurrentDirectory
     };
     private IReadOnlyList<string> _resolutions = DefaultConfig.Resolutions;
-    private string _configSource = DefaultConfigUrl;
+    private string _configSource = BuildConfig.ConfigUrl;
     private string _manifestSource = DefaultConfig.ManifestUrl;
     private string _newsSource = DefaultConfig.NewsUrl;
     private bool _hasSavedSettings;
@@ -194,7 +192,7 @@ public partial class MainWindow : Window
 
     private async void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
-        var window = new SettingsWindow(_settings, _resolutions, _config.ShowClientSettings, DefaultConfigUrl)
+        var window = new SettingsWindow(_settings, _resolutions, _config.ShowClientSettings, BuildConfig.ConfigUrl)
         {
             Owner = this
         };
@@ -489,7 +487,7 @@ public partial class MainWindow : Window
         }
 
         _config = LauncherConfig.CreateDefault();
-        _configSource = DefaultConfigUrl;
+        _configSource = BuildConfig.ConfigUrl;
         ApplyConfig(_config, _configSource);
         AppendLog("Config skipped: " + string.Join(" | ", errors));
     }
@@ -502,13 +500,13 @@ public partial class MainWindow : Window
             yield break;
         }
 
-        yield return DefaultConfigUrl;
-
-        var localConfig = Path.Combine(_appDirectory, LocalConfigFileName);
-        if (File.Exists(localConfig))
+        if (BuildConfig.UseLocalConfig)
         {
-            yield return localConfig;
+            yield return Path.Combine(_appDirectory, "config.json");
+            yield break;
         }
+
+        yield return BuildConfig.ConfigUrl;
     }
 
     private void ApplyConfig(LauncherConfig config, string configSource)
