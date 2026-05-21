@@ -176,11 +176,47 @@
                                 <CheckBox x:Name="ShowNewsBox" Content="News panel" Margin="0,0,18,6" />
                                 <CheckBox x:Name="RequireUpdateBeforePlayBox" Content="Check before play" Margin="0,0,18,6" />
                                 <CheckBox x:Name="AutoLoginEnabledBox" Content="AutoLogin" Margin="0,0,18,6" />
+                                <CheckBox x:Name="ShowServerStatusBox" Content="Server status" Margin="0,0,18,6" />
                                 <CheckBox x:Name="DefaultAudioMuteBox" Content="Mute by default" Margin="0,0,18,6" />
                             </WrapPanel>
                         </StackPanel>
 
-                        <Grid Grid.Row="6" Grid.ColumnSpan="3">
+                        <Grid Grid.Row="6" Grid.ColumnSpan="3" Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.25*" />
+                                <ColumnDefinition Width="0.7*" />
+                                <ColumnDefinition Width="0.7*" />
+                                <ColumnDefinition Width="0.8*" />
+                                <ColumnDefinition Width="0.9*" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Text="Server host / IP" Style="{StaticResource LabelTextStyle}" />
+                                <TextBox x:Name="ServerStatusHostBox" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                                <TextBlock Text="Auth port" Style="{StaticResource LabelTextStyle}" />
+                                <TextBox x:Name="AuthServerPortBox" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                                <TextBlock Text="Game port" Style="{StaticResource LabelTextStyle}" />
+                                <TextBox x:Name="GameServerPortBox" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="3" Margin="0,0,10,0">
+                                <TextBlock Text="Refresh sec" Style="{StaticResource LabelTextStyle}" />
+                                <TextBox x:Name="ServerStatusRefreshBox" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="Timeout ms" Style="{StaticResource LabelTextStyle}" />
+                                <TextBox x:Name="ServerStatusTimeoutBox" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Grid.Row="7" Grid.ColumnSpan="3">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />

@@ -150,6 +150,9 @@ Important fields:
 - `showClientSettings` - hides the settings section that edits client INI files.
 - `requireUpdateBeforePlay` - disables Play until fast check passes.
 - `autoLoginEnabled` - shows or hides the AutoLogin button.
+- `showServerStatus` - shows auth/game server status in the launcher header.
+- `serverStatusHost` - IP address or host name checked for server status.
+- `authServerPort` / `gameServerPort` - TCP ports checked for auth and game status. Defaults are `2106` and `7777`.
 - `gameExecutables` - executable candidates checked in order.
 
 ## Manifest Notes

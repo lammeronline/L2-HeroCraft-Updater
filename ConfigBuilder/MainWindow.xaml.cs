@@ -76,6 +76,12 @@ public partial class MainWindow : Window
             ShowNews = ShowNewsBox.IsChecked == true,
             RequireUpdateBeforePlay = RequireUpdateBeforePlayBox.IsChecked == true,
             AutoLoginEnabled = AutoLoginEnabledBox.IsChecked == true,
+            ShowServerStatus = ShowServerStatusBox.IsChecked == true,
+            ServerStatusHost = string.IsNullOrWhiteSpace(ServerStatusHostBox.Text) ? "127.0.0.1" : ServerStatusHostBox.Text.Trim(),
+            AuthServerPort = ParseInt(AuthServerPortBox.Text, 2106),
+            GameServerPort = ParseInt(GameServerPortBox.Text, 7777),
+            ServerStatusRefreshSeconds = ParseInt(ServerStatusRefreshBox.Text, 30),
+            ServerStatusTimeoutMilliseconds = ParseInt(ServerStatusTimeoutBox.Text, 1500),
             GameExecutables = ParseLines(GameExecutablesBox.Text),
             Resolutions = ParseLines(ResolutionsBox.Text),
             DefaultDisplayMode = string.IsNullOrWhiteSpace(DefaultDisplayModeBox.Text) ? "Windowed" : DefaultDisplayModeBox.Text.Trim(),
@@ -92,6 +98,12 @@ public partial class MainWindow : Window
         ShowNewsBox.IsChecked = config.ShowNews;
         RequireUpdateBeforePlayBox.IsChecked = config.RequireUpdateBeforePlay;
         AutoLoginEnabledBox.IsChecked = config.AutoLoginEnabled;
+        ShowServerStatusBox.IsChecked = config.ShowServerStatus;
+        ServerStatusHostBox.Text = config.ServerStatusHost;
+        AuthServerPortBox.Text = config.AuthServerPort.ToString();
+        GameServerPortBox.Text = config.GameServerPort.ToString();
+        ServerStatusRefreshBox.Text = config.ServerStatusRefreshSeconds.ToString();
+        ServerStatusTimeoutBox.Text = config.ServerStatusTimeoutMilliseconds.ToString();
         DefaultAudioMuteBox.IsChecked = config.DefaultAudioMuteOn;
         GameExecutablesBox.Text = string.Join(Environment.NewLine, config.GameExecutables);
         ResolutionsBox.Text = string.Join(Environment.NewLine, config.Resolutions);
@@ -107,6 +119,11 @@ public partial class MainWindow : Window
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static int ParseInt(string text, int fallback)
+    {
+        return int.TryParse(text.Trim(), out var value) ? value : fallback;
     }
 
     private void AppendLog(string message)

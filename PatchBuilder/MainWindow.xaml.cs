@@ -138,7 +138,7 @@ public partial class MainWindow : Window
 
             SetStatus("Manifest generated", outputManifest, 100);
             AppendLog("Manifest written: " + outputManifest);
-            AppendLog("Upload manifest to: " + BuildManifestUrl());
+            AppendLog("Upload manifest to: " + BuildManifestUrl(baseUrl, outputManifest));
             AppendLog("Files: " + files.Count);
             if (compressFiles)
             {
@@ -291,7 +291,7 @@ public partial class MainWindow : Window
             FileCountText.Text = $"{updatedManifest.Files.Count} files";
             AppendLog("Metadata saved without rebuilding patch files: " + manifestPath);
             AppendLog("File URLs updated from source URL: " + baseUrl);
-            AppendLog("Upload manifest to: " + BuildManifestUrl());
+            AppendLog("Upload manifest to: " + BuildManifestUrl(baseUrl, manifestPath));
         }
         catch (Exception ex)
         {
@@ -432,9 +432,22 @@ public partial class MainWindow : Window
         return UpdaterBaseUrl + "patch/";
     }
 
-    private static string BuildManifestUrl()
+    private static string BuildManifestUrl(string baseUrl, string outputManifest)
     {
-        return UpdaterBaseUrl + "manifest.json";
+        var normalizedBaseUrl = baseUrl.Trim().TrimEnd('/');
+        if (Uri.TryCreate(normalizedBaseUrl, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        {
+            var baseDirectoryUri = new Uri(uri.AbsoluteUri.TrimEnd('/') + "/");
+            var path = uri.AbsolutePath.TrimEnd('/');
+            var manifestUri = path.EndsWith("/patch", StringComparison.OrdinalIgnoreCase)
+                ? new Uri(baseDirectoryUri, "../manifest.json")
+                : new Uri(baseDirectoryUri, "manifest.json");
+
+            return manifestUri.ToString();
+        }
+
+        return Path.GetFullPath(outputManifest);
     }
 
     private static string BuildLauncherUrl()

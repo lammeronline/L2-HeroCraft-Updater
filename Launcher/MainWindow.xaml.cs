@@ -2,9 +2,12 @@ using L2ModernUpdater.Core;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Launcher;
 
@@ -25,6 +28,7 @@ public partial class MainWindow : Window
     private readonly FileVerificationService _verificationService = new();
     private readonly ExtraFileScanService _extraFileScanService = new();
     private readonly FileDownloadService _downloadService;
+    private readonly DispatcherTimer _serverStatusTimer = new();
     private static readonly LauncherConfig DefaultConfig = LauncherConfig.CreateDefault();
     private IReadOnlyList<FileVerificationResult> _pendingUpdates = [];
     private IReadOnlyList<ExtraFileResult> _extraFiles = [];
@@ -40,6 +44,8 @@ public partial class MainWindow : Window
     private string _newsSource = DefaultConfig.NewsUrl;
     private bool _hasSavedSettings;
     private bool _isBusy;
+    private bool _isCheckingServerStatus;
+    private string _lastServerStatus = string.Empty;
     private CancellationTokenSource _cts = new();
 
     // Startup
@@ -53,6 +59,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _downloadService = new FileDownloadService(_httpClient);
 
+        _serverStatusTimer.Tick += (_, _) => StartServerStatusCheck();
         SetStatus("Loading config", "Preparing launcher", 0, 0);
         RefreshSettingsSummary();
         AppendLog("Launcher started.");
@@ -79,6 +86,12 @@ public partial class MainWindow : Window
     private void CloseWindowButton_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _serverStatusTimer.Stop();
+        base.OnClosed(e);
     }
 
     // Toolbar commands
@@ -457,6 +470,120 @@ public partial class MainWindow : Window
         _updaterLog.Write(message);
     }
 
+    // Server status
+    private void ApplyServerStatusConfig()
+    {
+        _serverStatusTimer.Stop();
+        _lastServerStatus = string.Empty;
+
+        if (!_config.ShowServerStatus || string.IsNullOrWhiteSpace(_config.ServerStatusHost))
+        {
+            ServerStatusBadge.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        ServerStatusBadge.Visibility = Visibility.Visible;
+        SetServerStatus("Checking", (Brush)FindResource("TextMutedBrush"), "Checking " + _config.ServerStatusHost);
+
+        _serverStatusTimer.Interval = TimeSpan.FromSeconds(Math.Max(5, _config.ServerStatusRefreshSeconds));
+        _serverStatusTimer.Start();
+        StartServerStatusCheck();
+    }
+
+    private void StartServerStatusCheck()
+    {
+        _ = RefreshServerStatusAsync();
+    }
+
+    private async Task RefreshServerStatusAsync()
+    {
+        if (_isCheckingServerStatus || !_config.ShowServerStatus || string.IsNullOrWhiteSpace(_config.ServerStatusHost))
+        {
+            return;
+        }
+
+        _isCheckingServerStatus = true;
+        var host = _config.ServerStatusHost.Trim();
+        var authPort = NormalizePort(_config.AuthServerPort, 2106);
+        var gamePort = NormalizePort(_config.GameServerPort, 7777);
+        var timeout = Math.Max(250, _config.ServerStatusTimeoutMilliseconds);
+        if (string.IsNullOrEmpty(_lastServerStatus))
+        {
+            SetServerStatus("Checking", (Brush)FindResource("TextMutedBrush"), "Checking " + host);
+        }
+
+        try
+        {
+            var authTask = CanConnectAsync(host, authPort, timeout);
+            var gameTask = CanConnectAsync(host, gamePort, timeout);
+            await Task.WhenAll(authTask, gameTask);
+            UpdateServerStatus(authTask.Result, gameTask.Result, host, authPort, gamePort);
+        }
+        catch (Exception ex)
+        {
+            SetServerStatus("Offline", (Brush)FindResource("DangerBrush"), ex.Message);
+        }
+        finally
+        {
+            _isCheckingServerStatus = false;
+        }
+    }
+
+    private async Task<bool> CanConnectAsync(string host, int port, int timeoutMilliseconds)
+    {
+        try
+        {
+            using var timeoutCts = new CancellationTokenSource(timeoutMilliseconds);
+            using var client = new TcpClient();
+            await client.ConnectAsync(host, port, timeoutCts.Token);
+            return client.Connected;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void UpdateServerStatus(bool authOnline, bool gameOnline, string host, int authPort, int gamePort)
+    {
+        var status = (authOnline, gameOnline) switch
+        {
+            (true, true) => "Online",
+            (false, false) => "Offline",
+            _ => "Partial"
+        };
+        var brush = (authOnline, gameOnline) switch
+        {
+            (true, true) => new SolidColorBrush(Color.FromRgb(88, 190, 118)),
+            (false, false) => (Brush)FindResource("DangerBrush"),
+            _ => (Brush)FindResource("AccentBrush")
+        };
+        var tooltip = $"{host}:{authPort} Auth {(authOnline ? "online" : "offline")}; {host}:{gamePort} Game {(gameOnline ? "online" : "offline")}";
+
+        SetServerStatus(status, brush, tooltip);
+    }
+
+    private static int NormalizePort(int port, int fallback)
+    {
+        return port is >= 1 and <= 65535 ? port : fallback;
+    }
+
+    private void SetServerStatus(string status, Brush brush, string tooltip)
+    {
+        ServerStatusText.Text = status;
+        ServerStatusText.Foreground = brush;
+        ServerStatusDot.Fill = brush;
+        ServerStatusBadge.ToolTip = tooltip;
+
+        if (status == "Checking" || string.Equals(_lastServerStatus, status, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastServerStatus = status;
+        AppendLog($"Server status: {status} ({_config.ServerStatusHost}).");
+    }
+
     // Config bootstrap
     private async Task LoadStartupAsync()
     {
@@ -521,6 +648,7 @@ public partial class MainWindow : Window
             : ResolveManifestFromConfig(config.NewsUrl, configSource);
         ApplyNewsVisibility(config.ShowNews);
         LoadNewsPage();
+        ApplyServerStatusConfig();
 
         AutoLoginButton.Visibility = config.AutoLoginEnabled ? Visibility.Visible : Visibility.Collapsed;
         _resolutions = BuildResolutionList(config.Resolutions);

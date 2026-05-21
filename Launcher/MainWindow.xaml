@@ -264,6 +264,31 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="ServerStatusBadge"
+                            Background="#181C24"
+                            BorderBrush="{StaticResource StrokeBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12,7"
+                            Margin="0,0,12,0"
+                            Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="ServerStatusDot"
+                                     Width="9"
+                                     Height="9"
+                                     Fill="{StaticResource TextMutedBrush}"
+                                     Margin="0,0,8,0" />
+                            <TextBlock Text="Server"
+                                       Foreground="{StaticResource TextMutedBrush}"
+                                       FontSize="12"
+                                       Margin="0,0,7,0" />
+                            <TextBlock x:Name="ServerStatusText"
+                                       Text="Checking"
+                                       Foreground="{StaticResource TextSoftBrush}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
                     <Button x:Name="AutoLoginButton" Content="AutoLogin" Width="112" Margin="0,0,12,0" Visibility="Collapsed" Click="AutoLoginButton_Click" />
                     <Button x:Name="SettingsButton" Content="Settings" Width="104" ToolTip="Settings" Click="SettingsButton_Click" />
                 </StackPanel>
@@ -361,7 +386,7 @@
                             </Grid>
                         </Grid>
 
-                        <Grid Grid.Column="1" Height="116" Margin="22,0,0,0" VerticalAlignment="Center">
+                        <Grid Grid.Column="1" Margin="22,0,0,0" VerticalAlignment="Center">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
@@ -375,7 +400,8 @@
                             </StackPanel>
 
                             <Button x:Name="PlayButton" Grid.Column="1"
-                                    Content="PLAY" Width="118" Height="116" Margin="12,0,0,0"
+                                    Content="PLAY" Width="118" MinHeight="116" Margin="12,0,0,0"
+                                    VerticalAlignment="Stretch"
                                     Style="{StaticResource PlayButtonStyle}" Click="PlayButton_Click" />
                         </Grid>
                     </Grid>

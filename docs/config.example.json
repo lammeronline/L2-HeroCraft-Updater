@@ -5,6 +5,12 @@
   "showClientSettings": true,
   "requireUpdateBeforePlay": true,
   "autoLoginEnabled": false,
+  "showServerStatus": false,
+  "serverStatusHost": "127.0.0.1",
+  "authServerPort": 2106,
+  "gameServerPort": 7777,
+  "serverStatusRefreshSeconds": 30,
+  "serverStatusTimeoutMilliseconds": 1500,
   "gameExecutables": [
     "system/l2.exe",
     "l2.exe"

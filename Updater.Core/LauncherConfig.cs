@@ -32,6 +32,30 @@ public sealed class LauncherConfig
     [JsonPropertyName("autoLoginEnabled")]
     public bool AutoLoginEnabled { get; init; }
 
+    /// <summary>Controls visibility of auth/game server status in the launcher.</summary>
+    [JsonPropertyName("showServerStatus")]
+    public bool ShowServerStatus { get; init; }
+
+    /// <summary>IP address or host name used for auth/game server status checks.</summary>
+    [JsonPropertyName("serverStatusHost")]
+    public string ServerStatusHost { get; init; } = "127.0.0.1";
+
+    /// <summary>Lineage II auth server TCP port.</summary>
+    [JsonPropertyName("authServerPort")]
+    public int AuthServerPort { get; init; } = 2106;
+
+    /// <summary>Lineage II game server TCP port.</summary>
+    [JsonPropertyName("gameServerPort")]
+    public int GameServerPort { get; init; } = 7777;
+
+    /// <summary>How often the launcher refreshes server status.</summary>
+    [JsonPropertyName("serverStatusRefreshSeconds")]
+    public int ServerStatusRefreshSeconds { get; init; } = 30;
+
+    /// <summary>TCP connect timeout for one server status check.</summary>
+    [JsonPropertyName("serverStatusTimeoutMilliseconds")]
+    public int ServerStatusTimeoutMilliseconds { get; init; } = 1500;
+
     /// <summary>Relative executable candidates checked in order when starting the game.</summary>
     [JsonPropertyName("gameExecutables")]
     public List<string> GameExecutables { get; init; } = ["system/l2.exe", "l2.exe"];
